@@ -26,6 +26,8 @@ describe("content module", () => {
       expect(c.capture).toMatch(/^\/cases\//);
       expect(c.tags.length).toBeGreaterThan(0);
     }
+    const slugs = site.cases.map((c) => c.slug);
+    expect(new Set(slugs).size).toBe(slugs.length);
   });
   it("bans agency buzzwords everywhere", () => {
     const text = JSON.stringify(site).toLowerCase();
