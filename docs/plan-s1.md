@@ -85,7 +85,7 @@ Expected: repo visible on GitHub. (Public — the site will link to GitHub as pr
 - Create: `src/content/site.ts`
 - Test: `src/content/site.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `src/content/site.test.ts`:
 ```ts
@@ -127,14 +127,14 @@ describe("content module", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 pnpm test
 ```
 Expected: FAIL — cannot resolve `./site`.
 
-- [ ] **Step 3: Implement types**
+- [x] **Step 3: Implement types**
 
 `src/content/types.ts`:
 ```ts
@@ -172,7 +172,7 @@ export interface SiteContent {
 }
 ```
 
-- [ ] **Step 4: Implement content (real v0 copy, EN)**
+- [x] **Step 4: Implement content (real v0 copy, EN)**
 
 `src/content/site.ts`:
 ```ts
@@ -252,7 +252,7 @@ export const site: SiteContent = {
 };
 ```
 
-- [ ] **Step 5: Run tests, expect PASS, commit**
+- [x] **Step 5: Run tests, expect PASS, commit**
 
 ```bash
 pnpm test
