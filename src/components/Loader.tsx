@@ -33,8 +33,11 @@ export function Loader({ onDone }: { onDone: () => void }) {
 
   const noise = Array.from({ length: 24 }, (_, i) => GLYPHS[(i + progress) % GLYPHS.length]).join("");
 
+  // position:absolute (not fixed) on purpose: hash deep-links (/#contact) land
+  // scrolled past the loader — access beats intro (spec: never block content).
   return (
     <div
+      data-loader=""
       role="status"
       aria-label="Loading"
       style={{

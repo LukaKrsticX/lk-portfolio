@@ -14,7 +14,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${mono.variable} ${display.variable}`}>
-      <body>{children}</body>
+      <body>
+        <noscript>
+          <style>{`[data-loader]{display:none}`}</style>
+        </noscript>
+        {children}
+      </body>
     </html>
   );
 }
