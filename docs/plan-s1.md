@@ -271,7 +271,7 @@ git add src/content vitest.config.ts vitest.setup.ts && git commit -m "feat: typ
 - Modify: `src/app/page.tsx`
 - Test: `src/components/dom/Sections.test.tsx`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `src/components/dom/Sections.test.tsx`:
 ```tsx
@@ -304,9 +304,9 @@ describe("DOM layer", () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify FAIL** (`pnpm test` — cannot resolve `./Sections`)
+- [x] **Step 2: Run to verify FAIL** (`pnpm test` — cannot resolve `./Sections`)
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `src/app/globals.css` (replace entirely):
 ```css
@@ -469,14 +469,14 @@ export default function Home() {
 }
 ```
 
-- [ ] **Step 4: Run tests (PASS) + eyeball**
+- [x] **Step 4: Run tests (PASS) + eyeball**
 
 ```bash
 pnpm test && pnpm dev
 ```
 Expected: tests pass; http://localhost:3000 shows a readable dark page — this exact page is also the noscript/no-WebGL/reduced-motion fallback.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A && git commit -m "feat: server-rendered DOM layer — six anchored sections from content module"
