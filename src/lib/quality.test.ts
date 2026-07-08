@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { supportsWebGL } from "./gl-support";
-import { detectTier, heuristicTier } from "./quality";
+import { clampTier, demoteTier, detectTier, heuristicTier, persistTierCap, readTierCap } from "./quality";
 
 const getGPUTierMock = vi.hoisted(() => vi.fn());
 vi.mock("detect-gpu", () => ({ getGPUTier: getGPUTierMock }));
@@ -39,5 +39,38 @@ describe("detectTier", () => {
   it("falls back to heuristic when detect-gpu rejects", async () => {
     getGPUTierMock.mockRejectedValueOnce(new Error("blocked"));
     expect(await detectTier({ deviceMemory: 8, hardwareConcurrency: 8 } as never)).toBe("med");
+  });
+});
+
+describe("tier governance", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("demoteTier steps down one tier and floors at low", () => {
+    expect(demoteTier("high")).toBe("med");
+    expect(demoteTier("med")).toBe("low");
+    expect(demoteTier("low")).toBe("low");
+  });
+
+  it("clampTier caps the detected tier", () => {
+    expect(clampTier("high", "med")).toBe("med");
+    expect(clampTier("low", "med")).toBe("low");
+    expect(clampTier("high", null)).toBe("high");
+  });
+
+  it("persist/read round-trips within the TTL", () => {
+    persistTierCap("med", 1_000);
+    expect(readTierCap(1_000 + 6 * 24 * 60 * 60 * 1000)).toBe("med");
+  });
+
+  it("expires after 7 days (one throttled session must not cap forever)", () => {
+    persistTierCap("low", 1_000);
+    expect(readTierCap(1_000 + 8 * 24 * 60 * 60 * 1000)).toBeNull();
+  });
+
+  it("survives garbage in storage", () => {
+    localStorage.setItem("lk-tier-cap", "not-json{");
+    expect(readTierCap()).toBeNull();
+    localStorage.setItem("lk-tier-cap", JSON.stringify({ tier: "ultra", ts: Date.now() }));
+    expect(readTierCap()).toBeNull();
   });
 });
