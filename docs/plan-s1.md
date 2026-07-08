@@ -490,7 +490,7 @@ git add -A && git commit -m "feat: server-rendered DOM layer — six anchored se
 - Create: `src/components/Loader.tsx`
 - Test: `src/components/Loader.test.tsx`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `src/components/Loader.test.tsx`:
 ```tsx
@@ -518,9 +518,9 @@ describe("Loader", () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify FAIL** (`pnpm test` — cannot resolve `./Loader`)
+- [x] **Step 2: Run to verify FAIL** (`pnpm test` — cannot resolve `./Loader`)
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `src/components/Loader.tsx`:
 ```tsx
@@ -582,7 +582,7 @@ export function Loader({ onDone }: { onDone: () => void }) {
 }
 ```
 
-- [ ] **Step 4: Run tests (PASS)**, **Step 5: Commit**
+- [x] **Step 4: Run tests (PASS)**, **Step 5: Commit**
 
 ```bash
 pnpm test
