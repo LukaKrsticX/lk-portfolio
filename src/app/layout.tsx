@@ -3,8 +3,8 @@ import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import { site } from "@/content/site";
 import "./globals.css";
 
-const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
-const display = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" });
+const mono = JetBrains_Mono({ subsets: ["latin", "latin-ext"], variable: "--font-mono" });
+const display = Space_Grotesk({ subsets: ["latin", "latin-ext"], variable: "--font-display" });
 
 export const metadata: Metadata = {
   title: site.meta.title,

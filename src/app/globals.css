@@ -6,7 +6,8 @@
   --line: #1d3242;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; background: var(--bg); }
+html { background: var(--bg); }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 body {
   color: var(--text);
   font-family: var(--font-display), system-ui, sans-serif;
