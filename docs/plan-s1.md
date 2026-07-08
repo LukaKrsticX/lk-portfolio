@@ -598,7 +598,7 @@ git add src/components/Loader.tsx src/components/Loader.test.tsx && git commit -
 - Create: `src/lib/quality.ts`
 - Test: `src/lib/quality.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `src/lib/quality.test.ts`:
 ```ts
@@ -633,9 +633,9 @@ describe("detectTier", () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify FAIL**
+- [x] **Step 2: Run to verify FAIL**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `src/lib/gl-support.ts`:
 ```ts
@@ -679,7 +679,7 @@ export async function detectTier(nav: NavLike = navigator): Promise<Tier> {
 export const DPR_CAP: Record<Tier, number> = { high: 1.5, med: 1.25, low: 1 };
 ```
 
-- [ ] **Step 4: Run tests (PASS)**, **Step 5: Commit**
+- [x] **Step 4: Run tests (PASS)**, **Step 5: Commit**
 
 ```bash
 pnpm test
