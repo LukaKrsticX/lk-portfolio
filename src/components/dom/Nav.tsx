@@ -12,6 +12,7 @@ export function Nav() {
       aria-label="Main"
       style={{
         position: "sticky", top: 16, zIndex: 10, display: "flex", gap: 20,
+        flexWrap: "wrap", rowGap: 8,
         justifyContent: "flex-end", padding: "8px 24px",
       }}
     >

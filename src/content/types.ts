@@ -1,32 +1,32 @@
 export interface CaseStudy {
-  slug: string;
-  title: string;
-  role: string;
-  year: string;
-  story: { broken: string; did: string; result: string };
-  url: string;
-  capture: string;
-  tags: string[];
+  readonly slug: string;
+  readonly title: string;
+  readonly role: string;
+  readonly year: string;
+  readonly story: { readonly broken: string; readonly did: string; readonly result: string };
+  readonly url: string;
+  readonly capture: string;
+  readonly tags: readonly string[];
 }
 
 export interface Service {
-  key: "rescue" | "build" | "automation";
-  title: string;
-  blurb: string;
+  readonly key: "rescue" | "build" | "automation";
+  readonly title: string;
+  readonly blurb: string;
 }
 
 export interface SiteContent {
-  meta: { title: string; description: string };
-  positioning: string;
-  services: Service[];
-  agencies: {
-    whiteLabel: string;
-    timezone: string;
-    cadence: string;
-    capacity: string;
-    mapping: string;
+  readonly meta: { readonly title: string; readonly description: string };
+  readonly positioning: string;
+  readonly services: readonly Service[];
+  readonly agencies: {
+    readonly whiteLabel: string;
+    readonly timezone: string;
+    readonly cadence: string;
+    readonly capacity: string;
+    readonly mapping: string;
   };
-  cases: CaseStudy[];
-  about: string;
-  contact: { email: string; privacyNote: string };
+  readonly cases: readonly CaseStudy[];
+  readonly about: string;
+  readonly contact: { readonly email: string; readonly privacyNote: string };
 }

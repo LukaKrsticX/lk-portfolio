@@ -1,6 +1,6 @@
 import type { SiteContent } from "./types";
 
-export const site: SiteContent = {
+export const site = {
   meta: {
     title: "Luka Krstić — creative developer",
     description:
@@ -71,4 +71,4 @@ export const site: SiteContent = {
     email: "lukakrstic2002@gmail.com",
     privacyNote: "Your name and email are used only to reply. No lists, no marketing.",
   },
-};
+} satisfies SiteContent;

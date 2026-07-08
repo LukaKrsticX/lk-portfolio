@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const CAP_MS = 1500;
 const STEP_MS = 30;
@@ -9,27 +9,25 @@ export function Loader({ onDone }: { onDone: () => void }) {
   const [progress, setProgress] = useState(0);
   const done = useRef(false);
 
-  const finish = () => {
+  const finish = useCallback(() => {
     if (!done.current) {
       done.current = true;
       onDone();
     }
-  };
+  }, [onDone]);
 
+  // Updater stays pure; the interval is cleared on unmount (parent unmounts
+  // the Loader when onDone flips `booted`).
   useEffect(() => {
     const id = setInterval(() => {
-      setProgress((p) => {
-        const next = Math.min(100, p + Math.ceil(100 / (CAP_MS / STEP_MS)));
-        if (next >= 100) {
-          clearInterval(id);
-          finish();
-        }
-        return next;
-      });
+      setProgress((p) => Math.min(100, p + Math.ceil(100 / (CAP_MS / STEP_MS))));
     }, STEP_MS);
     return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (progress >= 100) finish();
+  }, [progress, finish]);
 
   const noise = Array.from({ length: 24 }, (_, i) => GLYPHS[(i + progress) % GLYPHS.length]).join("");
 

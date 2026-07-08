@@ -31,7 +31,14 @@ export function Sections() {
         <h2>Selected work</h2>
         <div className="grid">
           {site.cases.map((c) => (
-            <a className="card" key={c.slug} href={c.url} target="_blank" rel="noreferrer">
+            <a
+              className="card"
+              key={c.slug}
+              href={c.url}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`${c.title} — ${c.role}. Opens live site.`}
+            >
               <p className="mono">{c.role} · {c.year}</p>
               <h3 style={{ fontWeight: 500, margin: "8px 0" }}>{c.title}</h3>
               <p style={{ color: "var(--text-dim)" }}>{c.story.broken}</p>

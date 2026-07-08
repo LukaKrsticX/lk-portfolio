@@ -35,4 +35,17 @@ describe("DOM layer", () => {
       expect(document.getElementById(href.slice(1))).toBeInTheDocument();
     }
   });
+  it("nav wraps on narrow viewports (ledger: <360px overflow)", () => {
+    render(<Nav />);
+    expect(screen.getByRole("navigation")).toHaveStyle({ flexWrap: "wrap" });
+  });
+  it("case cards carry a concise aria-label (ledger)", () => {
+    render(<Sections />);
+    for (const c of site.cases) {
+      expect(screen.getByRole("link", { name: new RegExp(c.title, "i") })).toHaveAttribute(
+        "aria-label",
+        `${c.title} — ${c.role}. Opens live site.`,
+      );
+    }
+  });
 });
