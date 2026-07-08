@@ -68,7 +68,7 @@ pnpm test
 ```
 Expected: "No test files found" exit 0 (or passWithNoTests warning — add `passWithNoTests: true` to the test config).
 
-- [ ] **Step 5: Init git + GitHub + first commit**
+- [x] **Step 5: Init git + GitHub + first commit**
 
 ```bash
 git init -b main && git add -A && git commit -m "chore: scaffold next.js app with vitest"
