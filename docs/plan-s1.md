@@ -930,7 +930,7 @@ jobs:
       - run: pnpm budget
 ```
 
-- [ ] **Step 4: Commit + verify Action goes green on GitHub**
+- [x] **Step 4: Commit + verify Action goes green on GitHub**
 
 ```bash
 git add -A && git commit -m "ci: vitest + build + enforced 550KB first-load budget" && git push
