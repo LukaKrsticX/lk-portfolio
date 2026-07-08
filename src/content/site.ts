@@ -71,4 +71,4 @@ export const site = {
     email: "lukakrstic2002@gmail.com",
     privacyNote: "Your name and email are used only to reply. No lists, no marketing.",
   },
-} satisfies SiteContent;
+} as const satisfies SiteContent;
