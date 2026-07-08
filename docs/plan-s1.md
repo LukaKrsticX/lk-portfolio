@@ -698,7 +698,7 @@ git add src/lib && git commit -m "feat: webgl support check + quality tier detec
 
 Note: WebGL does not run in jsdom — this task is verified manually + by the existing DOM tests still passing (the DOM layer must remain untouched when GL fails).
 
-- [ ] **Step 1: Placeholder starfield (replaced by the real hero in S2)**
+- [x] **Step 1: Placeholder starfield (replaced by the real hero in S2)**
 
 `src/components/gl/Starfield.tsx`:
 ```tsx
@@ -730,7 +730,7 @@ export function Starfield({ count = 800 }: { count?: number }) {
 }
 ```
 
-- [ ] **Step 2: Scene wrapper**
+- [x] **Step 2: Scene wrapper**
 
 `src/components/gl/Scene.tsx`:
 ```tsx
@@ -757,7 +757,7 @@ export default function Scene({ tier }: { tier: Tier }) {
 }
 ```
 
-- [ ] **Step 3: Experience orchestrator (loader → tier → scene; every failure path = DOM stays)**
+- [x] **Step 3: Experience orchestrator (loader → tier → scene; every failure path = DOM stays)**
 
 `src/components/Experience.tsx`:
 ```tsx
@@ -794,7 +794,7 @@ export function Experience() {
 }
 ```
 
-- [ ] **Step 4: Mount in page**
+- [x] **Step 4: Mount in page**
 
 `src/app/page.tsx`:
 ```tsx
@@ -813,14 +813,14 @@ export default function Home() {
 }
 ```
 
-- [ ] **Step 5: Verify manually + tests still green**
+- [x] **Step 5: Verify manually + tests still green**
 
 ```bash
 pnpm test && pnpm dev
 ```
 Expected: loader plays ≤1.5s (skippable), starfield drifts behind the DOM sections; with DevTools → Rendering → "Emulate prefers-reduced-motion" the scene never mounts and the page stays fully readable; `pnpm test` all green.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A && git commit -m "feat: r3f canvas shell behind loader with tier dpr caps and failure fallbacks"
