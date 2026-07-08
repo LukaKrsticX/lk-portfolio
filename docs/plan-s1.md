@@ -878,7 +878,7 @@ git add src/app/sitemap.ts src/app/robots.ts && git commit -m "feat: sitemap and
 - Create: `.github/workflows/ci.yml`
 - Modify: `package.json` (script)
 
-- [ ] **Step 1: Budget script**
+- [x] **Step 1: Budget script**
 
 `scripts/check-budget.mjs`:
 ```js
@@ -902,14 +902,14 @@ if (kb > LIMIT_KB) {
 
 Add script: `"budget": "node scripts/check-budget.mjs"`.
 
-- [ ] **Step 2: Run locally**
+- [x] **Step 2: Run locally**
 
 ```bash
 pnpm build && pnpm budget
 ```
 Expected: prints a number well under 550KB (S1 has no heavy scenes yet — likely ~150–250KB) and exits 0. Record the number in the commit message.
 
-- [ ] **Step 3: GitHub Action**
+- [x] **Step 3: GitHub Action**
 
 `.github/workflows/ci.yml`:
 ```yaml
