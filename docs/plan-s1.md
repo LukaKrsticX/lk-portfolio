@@ -943,9 +943,9 @@ Expected: the `ci` workflow passes on GitHub within a few minutes.
 
 **Files:** none (config on Vercel side)
 
-- [ ] **Step 1 (OPERATOR, one-time, ~3 min):** vercel.com → Add New → Project → Import `lk-portfolio` from GitHub → framework auto-detected (Next.js) → Deploy. Set project name `lukakrstic` if the subdomain is free.
+- [x] **Step 1 (OPERATOR, one-time, ~3 min):** vercel.com → Add New → Project → Import `lk-portfolio` from GitHub → framework auto-detected (Next.js) → Deploy. Set project name `lukakrstic` if the subdomain is free.
 
-- [ ] **Step 2: Live smoke checklist**
+- [x] **Step 2: Live smoke checklist**
 
 - URL loads over HTTPS; dark DOM page readable.
 - Loader plays once, Skip works.
