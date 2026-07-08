@@ -834,7 +834,7 @@ git add -A && git commit -m "feat: r3f canvas shell behind loader with tier dpr 
 - Create: `src/app/sitemap.ts`
 - Create: `src/app/robots.ts`
 
-- [ ] **Step 1: Implement**
+- [x] **Step 1: Implement**
 
 `src/app/sitemap.ts`:
 ```ts
@@ -858,7 +858,7 @@ export default function robots(): MetadataRoute.Robots {
 }
 ```
 
-- [ ] **Step 2: Verify + commit**
+- [x] **Step 2: Verify + commit**
 
 ```bash
 pnpm build
