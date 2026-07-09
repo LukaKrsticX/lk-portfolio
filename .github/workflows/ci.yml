@@ -9,6 +9,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 24, cache: pnpm }
       - run: pnpm install --frozen-lockfile
+      # bake-drift guard: fails if assets/monogram-lk.svg was edited without rebaking
+      - run: pnpm bake:monogram && git diff --exit-code src/components/gl/monogram-data.ts
       - run: pnpm test
       - run: pnpm build
       - run: pnpm budget
