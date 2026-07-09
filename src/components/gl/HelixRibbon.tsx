@@ -8,9 +8,11 @@ const LENGTH = 7;
 const WIDTH = 0.34;
 const SEGMENTS = 256;
 const TURNS = 2.25;
+const RADIUS = 0.25; // > WIDTH/2 = 0.17 so the two strands clear each other
 
 function buildStrip(phase: number): PlaneGeometry {
   const geo = new PlaneGeometry(LENGTH, WIDTH, SEGMENTS, 1);
+  geo.translate(0, RADIUS, 0); // off-axis: strands orbit the axis instead of straddling it
   twistPlanePositions(geo.attributes.position.array as Float32Array, LENGTH, TURNS, phase);
   geo.attributes.position.needsUpdate = true;
   geo.computeVertexNormals(); // correct shading for free — no shader twist needed
@@ -36,9 +38,11 @@ export function HelixRibbon({ material }: { material: Material }) {
   });
 
   return (
-    <group ref={group} position={[0.6, -0.15, -0.9]} rotation={[0, 0, -0.42]}>
-      <mesh geometry={strandA} material={material} />
-      <mesh geometry={strandB} material={material} />
+    <group position={[0.6, -0.15, -0.9]} rotation={[0, 0, -0.42]}>
+      <group ref={group}>
+        <mesh geometry={strandA} material={material} />
+        <mesh geometry={strandB} material={material} />
+      </group>
     </group>
   );
 }
