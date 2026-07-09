@@ -40,7 +40,7 @@ export function Experience() {
     setTier((t) => {
       if (t === null || t === "low") return t;
       const demoted = demoteTier(t);
-      persistTierCap(demoted);
+      if (debugTier() === null) persistTierCap(demoted);
       return demoted;
     });
   }, []);
