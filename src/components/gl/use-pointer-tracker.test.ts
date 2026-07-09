@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import { usePointerTracker } from "./use-pointer-tracker";
 
 function move(x: number, y: number): void {
-  window.dispatchEvent(new PointerEvent("pointermove", { clientX: x, clientY: y }));
+  // jsdom's PointerEvent defaults isPrimary to false; the tracker filters
+  // non-primary pointers, so the helper must mark its events primary.
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { clientX: x, clientY: y, isPrimary: true }),
+  );
 }
 
 describe("usePointerTracker", () => {
@@ -15,6 +19,21 @@ describe("usePointerTracker", () => {
     act(() => move(window.innerWidth * 0.6, window.innerHeight / 2));
     expect(result.current.current.velocity.x).toBeCloseTo(0.1, 1);
     expect(result.current.current.moved).toBe(true);
+  });
+  it("keeps velocity at zero on the very first move (no prior uv to diff)", () => {
+    const { result } = renderHook(() => usePointerTracker());
+    act(() => move(window.innerWidth * 0.25, window.innerHeight * 0.25));
+    expect(result.current.current.velocity.x).toBe(0);
+    expect(result.current.current.velocity.y).toBe(0);
+  });
+  it("ignores non-primary pointers (multi-touch would teleport uv)", () => {
+    const { result } = renderHook(() => usePointerTracker());
+    act(() =>
+      window.dispatchEvent(
+        new PointerEvent("pointermove", { clientX: 10, clientY: 10, isPrimary: false }),
+      ),
+    );
+    expect(result.current.current.moved).toBe(false);
   });
   it("removes the listener on unmount", () => {
     const { result, unmount } = renderHook(() => usePointerTracker());

@@ -8,7 +8,7 @@ export interface PointerState {
   readonly uv: Vector2;
   /** ndc in [-1,1]², y up — for parallax */
   readonly ndc: Vector2;
-  /** uv delta of the last move event; consumers zero it after use */
+  /** accumulated uv delta since last consume; exactly ONE consumer owns it (the ripple sim) and zeroes it after reading each frame */
   readonly velocity: Vector2;
   moved: boolean;
 }
@@ -29,9 +29,18 @@ export function usePointerTracker(): RefObject<PointerState> {
 
   useEffect(() => {
     const onMove = (e: PointerEvent | MouseEvent): void => {
+      // Two fingers down interleave pointermove from both pointerIds — uv
+      // teleports and velocity spikes. Track the primary pointer only.
+      if ("isPrimary" in e && !e.isPrimary) return;
       const s = state.current;
       const [u, v] = pointerToUv(e.clientX, e.clientY, window.innerWidth, window.innerHeight);
-      if (s.moved) s.velocity.set(u - s.uv.x, v - s.uv.y);
+      // Accumulate, don't overwrite: browsers coalesce pointermove to vsync,
+      // not to our frame — on a janky frame several moves land between two
+      // sim ticks and `set` would drop all but the last delta.
+      if (s.moved) {
+        s.velocity.x += u - s.uv.x;
+        s.velocity.y += v - s.uv.y;
+      }
       s.uv.set(u, v);
       s.ndc.set(u * 2 - 1, v * 2 - 1);
       s.moved = true;
