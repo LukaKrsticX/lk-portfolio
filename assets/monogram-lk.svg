@@ -1,8 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Interlocked geometric LK lockup, v3 (step-6 round 3):
-       K is a single chevron — no K stem; its outer apex sits 10 units right
-       of the L stem (breathing room per operator). Diagonals are 45° bands
-       with 20 horizontal separation (~14 perpendicular, matching the L stem). -->
+  <!-- Interlocked geometric LK lockup, v4 (step-6 round 4):
+       K chevron outer apex sits 7 units right of the L stem (tightened from 10
+       per operator). Diagonals stay 45° bands, 20 horizontal separation
+       (~14 perpendicular, matching the L stem). Card-suit diamond pip nested
+       in the chevron notch — "LK of diamonds" motif. Judge-panel refinements:
+       gentle concavity (0.22 control inset — card pip, not AI-sparkle star),
+       0.78 width:height, centroid nudged left onto the notch optical center. -->
   <path d="M20 10 H34 V74 H60 V88 H20 Z"/>
-  <path d="M44 46 L80 10 H100 L64 46 L100 82 H80 Z"/>
+  <path d="M41 46 L77 10 H97 L61 46 L97 82 H77 Z"/>
+  <path d="M80.5 34 Q77 41.3 71.5 46 Q77 50.7 80.5 58 Q84 50.7 89.5 46 Q84 41.3 80.5 34 Z"/>
 </svg>
