@@ -27,13 +27,19 @@ const eslintConfig = defineConfig([
       "no-restricted-imports": [
         "error",
         {
-          paths: [
+          patterns: [
             {
-              name: "three/examples/jsm/loaders/SVGLoader.js",
+              group: [
+                "three/examples/jsm/loaders/SVGLoader*",
+                "three/addons/loaders/SVGLoader*",
+              ],
               message:
                 "Bake-time only — run pnpm bake:monogram; never bundle SVGLoader.",
             },
-            { name: "jsdom", message: "Bake-time only — never bundle jsdom." },
+            {
+              group: ["jsdom"],
+              message: "Bake-time only — never bundle jsdom.",
+            },
           ],
         },
       ],

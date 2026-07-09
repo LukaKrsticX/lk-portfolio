@@ -20,6 +20,14 @@ describe("usePointerTracker", () => {
     expect(result.current.current.velocity.x).toBeCloseTo(0.1, 1);
     expect(result.current.current.moved).toBe(true);
   });
+  it("accumulates velocity across consecutive moves (coalesced deltas must sum, not overwrite)", () => {
+    const { result } = renderHook(() => usePointerTracker());
+    act(() => move(window.innerWidth / 2, window.innerHeight / 2));
+    act(() => move(window.innerWidth * 0.6, window.innerHeight / 2));
+    act(() => move(window.innerWidth * 0.7, window.innerHeight / 2));
+    // 0.5→0.6→0.7: both 0.1 deltas sum to 0.2; overwrite semantics would give 0.1.
+    expect(result.current.current.velocity.x).toBeCloseTo(0.2, 1);
+  });
   it("keeps velocity at zero on the very first move (no prior uv to diff)", () => {
     const { result } = renderHook(() => usePointerTracker());
     act(() => move(window.innerWidth * 0.25, window.innerHeight * 0.25));
