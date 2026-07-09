@@ -10,7 +10,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "budget": "node scripts/check-budget.mjs"
+    "budget": "node scripts/check-budget.mjs",
+    "bake:monogram": "node scripts/bake-monogram.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
