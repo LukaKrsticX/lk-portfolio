@@ -1,6 +1,6 @@
 "use client";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useMemo, useRef, type RefObject } from "react";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { Color, ShaderMaterial, Texture } from "three";
 
 const BG_VERT = /* glsl */ `
@@ -56,6 +56,7 @@ export function RippleBackground({ trail }: { trail: RefObject<Texture | null> }
       }),
     [],
   );
+  useEffect(() => () => material.dispose(), [material]);
   const time = useRef(0);
 
   useFrame((_, delta) => {
