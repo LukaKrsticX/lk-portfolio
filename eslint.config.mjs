@@ -13,6 +13,32 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    // Imperative three.js mutation (uniforms, scene.environment) inside
+    // useFrame/useEffect is the R3F idiom; the react-compiler immutability
+    // rule false-positives on it. Scoped to GL components only.
+    files: ["src/components/gl/**"],
+    rules: { "react-hooks/immutability": "off" },
+  },
+  {
+    // Bake-time-only modules must never reach client code (bundle safety).
+    files: ["src/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "three/examples/jsm/loaders/SVGLoader.js",
+              message:
+                "Bake-time only — run pnpm bake:monogram; never bundle SVGLoader.",
+            },
+            { name: "jsdom", message: "Bake-time only — never bundle jsdom." },
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;
