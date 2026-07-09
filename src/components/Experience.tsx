@@ -1,10 +1,18 @@
 "use client";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Loader } from "@/components/Loader";
 import { SceneBoundary } from "@/components/gl/SceneBoundary";
+import { debugTier } from "@/lib/debug-flags";
 import { supportsWebGL } from "@/lib/gl-support";
-import { detectTier, type Tier } from "@/lib/quality";
+import {
+  clampTier,
+  demoteTier,
+  detectTier,
+  persistTierCap,
+  readTierCap,
+  type Tier,
+} from "@/lib/quality";
 import { useMediaQuery } from "@/lib/use-media-query";
 
 const Scene = dynamic(() => import("@/components/gl/Scene"), { ssr: false });
@@ -16,7 +24,25 @@ export function Experience() {
 
   useEffect(() => {
     if (!supportsWebGL()) return;
-    detectTier().then(setTier).catch(() => setTier("low"));
+    const override = debugTier();
+    if (override !== null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot debug override
+      setTier(override);
+      return;
+    }
+    detectTier()
+      .then((t) => setTier(clampTier(t, readTierCap())))
+      .catch(() => setTier("low"));
+  }, []);
+
+  // Demote one step and persist (7-day cap) — never promote at runtime.
+  const handleDemote = useCallback(() => {
+    setTier((t) => {
+      if (t === null || t === "low") return t;
+      const demoted = demoteTier(t);
+      persistTierCap(demoted);
+      return demoted;
+    });
   }, []);
 
   // tier !== null implies supportsWebGL() passed (detectTier only runs then).
@@ -27,7 +53,7 @@ export function Experience() {
       {!booted && !reduced && <Loader onDone={() => setBooted(true)} />}
       {showScene && (
         <SceneBoundary>
-          <Scene tier={tier} />
+          <Scene tier={tier} onDemote={handleDemote} />
         </SceneBoundary>
       )}
     </>
