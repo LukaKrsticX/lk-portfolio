@@ -73,4 +73,22 @@ describe("tier governance", () => {
     localStorage.setItem("lk-tier-cap", JSON.stringify({ tier: "ultra", ts: Date.now() }));
     expect(readTierCap()).toBeNull();
   });
+
+  it("holds at exactly the 7-day boundary (> not >=)", () => {
+    persistTierCap("med", 1_000);
+    expect(readTierCap(1_000 + 7 * 24 * 60 * 60 * 1000)).toBe("med");
+  });
+
+  it("rejects future timestamps (clock skew must not extend the TTL)", () => {
+    persistTierCap("med", 5_000);
+    expect(readTierCap(4_000)).toBeNull();
+  });
+
+  it("persistTierCap swallows storage failures", () => {
+    const spy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("quota");
+    });
+    expect(() => persistTierCap("med")).not.toThrow();
+    spy.mockRestore();
+  });
 });

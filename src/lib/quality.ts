@@ -46,7 +46,7 @@ export function readTierCap(now: number = Date.now()): Tier | null {
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return null;
     const { tier, ts } = parsed as { tier?: unknown; ts?: unknown };
-    if (typeof ts !== "number" || now - ts > TIER_CAP_TTL_MS) return null;
+    if (typeof ts !== "number" || ts > now || now - ts > TIER_CAP_TTL_MS) return null;
     return tier === "low" || tier === "med" || tier === "high" ? tier : null;
   } catch {
     return null;

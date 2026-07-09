@@ -1,4 +1,4 @@
-import { EquirectangularReflectionMapping } from "three";
+import { EquirectangularReflectionMapping, SRGBColorSpace } from "three";
 import { describe, expect, it } from "vitest";
 import { buildEnvironmentTexture, ENV_HEIGHT, ENV_WIDTH } from "./env-texture";
 
@@ -9,6 +9,9 @@ describe("buildEnvironmentTexture", () => {
     expect(tex.image.height).toBe(ENV_HEIGHT);
     expect((tex.image.data as Uint8Array).length).toBe(ENV_WIDTH * ENV_HEIGHT * 4);
     expect(tex.mapping).toBe(EquirectangularReflectionMapping);
+    expect(tex.version).toBeGreaterThan(0); // needsUpdate was set (setter-only, assert version)
+    expect(tex.flipY).toBe(false);
+    expect(tex.colorSpace).toBe(SRGBColorSpace);
     tex.dispose();
   });
   it("key hotspot is much brighter than the dark base", () => {
@@ -21,6 +24,7 @@ describe("buildEnvironmentTexture", () => {
       return data[i] + data[i + 1] + data[i + 2];
     };
     expect(px(0.22, 0.72)).toBeGreaterThan(px(0.0, 0.02) + 150);
+    expect(px(0, 0.6)).toBe(px(1, 0.6)); // seam continuity: wrap-distance makes edge columns match
     tex.dispose();
   });
   it("is fully opaque", () => {
