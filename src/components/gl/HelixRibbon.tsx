@@ -5,10 +5,10 @@ import { Group, Material, PlaneGeometry } from "three";
 import { twistPlanePositions } from "@/lib/helix";
 
 const LENGTH = 7;
-const WIDTH = 0.34;
+const WIDTH = 0.2;
 const SEGMENTS = 256;
 const TURNS = 2.25;
-const RADIUS = 0.25; // > WIDTH/2 = 0.17 so the two strands clear each other
+const RADIUS = 0.25; // > WIDTH/2 = 0.1 so the two strands clear each other
 
 function buildStrip(phase: number): PlaneGeometry {
   const geo = new PlaneGeometry(LENGTH, WIDTH, SEGMENTS, 1);
@@ -38,7 +38,7 @@ export function HelixRibbon({ material }: { material: Material }) {
   });
 
   return (
-    <group position={[0.6, -0.15, -0.9]} rotation={[0, 0, -0.42]}>
+    <group position={[1.1, 0.1, -0.7]} rotation={[0, 0, -0.42]}>
       <group ref={group}>
         <mesh geometry={strandA} material={material} />
         <mesh geometry={strandB} material={material} />

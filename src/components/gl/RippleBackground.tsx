@@ -1,7 +1,7 @@
 "use client";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, type RefObject } from "react";
-import { Color, ShaderMaterial, Texture } from "three";
+import { Color, ShaderMaterial, Texture, Vector2 } from "three";
 
 const BG_VERT = /* glsl */ `
 varying vec2 vUv;
@@ -17,6 +17,7 @@ const BG_FRAG = /* glsl */ `
 uniform sampler2D uTrail;
 uniform float uTime;
 uniform vec3 uColor;
+uniform vec2 uResolution;
 varying vec2 vUv;
 
 // Arithmetic ordered dither — no arrays: dynamic array indexing is not
@@ -30,7 +31,11 @@ float bayer4(vec2 a) {
 }
 
 void main() {
-  float trail = texture2D(uTrail, vUv).r;
+  // Screen-space sample: the trail texture is written in window uv, so sampling
+  // by plane uv would scale the splat away from the cursor (plane is oversized
+  // vs the frustum at z=-2). gl_FragCoord/resolution IS window uv — exact hit.
+  vec2 screenUv = gl_FragCoord.xy / uResolution;
+  float trail = texture2D(uTrail, screenUv).r;
   float idle = 0.5 + 0.5 * sin(uTime * 0.21 + vUv.x * 9.0) * sin(uTime * 0.13 + vUv.y * 7.0);
   float v = clamp(trail * 0.85 + idle * 0.05, 0.0, 1.0);
   float d = bayer4(gl_FragCoord.xy / 2.0);
@@ -50,6 +55,7 @@ export function RippleBackground({ trail }: { trail: RefObject<Texture | null> }
           uTrail: { value: null },
           uTime: { value: 0 },
           uColor: { value: new Color("#4da6e8") },
+          uResolution: { value: new Vector2(1, 1) },
         },
         transparent: true,
         depthWrite: false,
@@ -59,10 +65,11 @@ export function RippleBackground({ trail }: { trail: RefObject<Texture | null> }
   useEffect(() => () => material.dispose(), [material]);
   const time = useRef(0);
 
-  useFrame((_, delta) => {
+  useFrame(({ gl }, delta) => {
     time.current += Math.min(delta, 1 / 30); // hidden-tab delta clamp
     material.uniforms.uTime.value = time.current;
     material.uniforms.uTrail.value = trail.current;
+    gl.getDrawingBufferSize(material.uniforms.uResolution.value as Vector2);
   });
 
   // Oversized so it still covers the frustum at z=-2 with mild camera parallax.

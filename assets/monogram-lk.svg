@@ -1,10 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Interlocked geometric LK lockup, v0 starter.
-       Shapes only TOUCH (no coplanar face overlap → no z-fighting when extruded):
-       the K stem stands ON the L foot; arm and leg attach at the stem's right edge.
-       Iterate coordinates after first visual render (Task 10 step 6). -->
-  <path d="M14 12 H27 V68 H62 V81 H14 Z"/>
-  <path d="M48 12 H61 V68 H48 Z"/>
-  <path d="M61 40 L88 12 H99 L61 51 Z"/>
-  <path d="M61 51 L84 81 H70 L61 61 Z"/>
+  <!-- Interlocked geometric LK lockup, v3 (step-6 round 3):
+       K is a single chevron — no K stem; its outer apex sits 10 units right
+       of the L stem (breathing room per operator). Diagonals are 45° bands
+       with 20 horizontal separation (~14 perpendicular, matching the L stem). -->
+  <path d="M20 10 H34 V74 H60 V88 H20 Z"/>
+  <path d="M44 46 L80 10 H100 L64 46 L100 82 H80 Z"/>
 </svg>

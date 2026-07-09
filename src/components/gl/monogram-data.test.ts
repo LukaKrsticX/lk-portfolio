@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { MONOGRAM_SHAPES } from "./monogram-data";
 
 describe("baked monogram data", () => {
-  it("has the L + K stem + arm + leg shapes", () => {
-    expect(MONOGRAM_SHAPES.length).toBeGreaterThanOrEqual(3);
+  it("has the L and K chevron shapes (v2 lockup)", () => {
+    expect(MONOGRAM_SHAPES.length).toBeGreaterThanOrEqual(2);
     expect(MONOGRAM_SHAPES.length).toBeLessThanOrEqual(12);
   });
   it("is normalized to roughly [-1.5, 1.5] and centered", () => {
