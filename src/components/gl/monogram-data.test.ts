@@ -2,9 +2,14 @@ import { describe, expect, it } from "vitest";
 import { MONOGRAM_SHAPES } from "./monogram-data";
 
 describe("baked monogram data", () => {
-  it("has the L and K chevron shapes (v2 lockup)", () => {
+  it("has the frame ring plus L and K shapes (v5 lockup)", () => {
     expect(MONOGRAM_SHAPES.length).toBeGreaterThanOrEqual(2);
     expect(MONOGRAM_SHAPES.length).toBeLessThanOrEqual(12);
+  });
+  it("bakes the frame as a ring — exactly one shape carries exactly one hole", () => {
+    const withHoles = MONOGRAM_SHAPES.filter((s) => s.holes.length > 0);
+    expect(withHoles).toHaveLength(1);
+    expect(withHoles[0].holes).toHaveLength(1);
   });
   it("is normalized to roughly [-1.5, 1.5] and centered", () => {
     const all = MONOGRAM_SHAPES.flatMap((s) => [...s.points, ...s.holes.flat()]);
