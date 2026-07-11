@@ -61,6 +61,19 @@ const eslintConfig = defineConfig([
               message:
                 "GL-only — @react-three/fiber and three must stay inside src/components/gl/** or they'll bloat the first-load chunk. Talk to GL via src/lib/scroll.ts instead.",
             },
+            // duplicated from the bake-time block above: flat config REPLACES no-restricted-imports per file-set, it does not merge
+            {
+              group: [
+                "three/examples/jsm/loaders/SVGLoader*",
+                "three/addons/loaders/SVGLoader*",
+              ],
+              message:
+                "Bake-time only — run pnpm bake:monogram; never bundle SVGLoader.",
+            },
+            {
+              group: ["jsdom"],
+              message: "Bake-time only — never bundle jsdom.",
+            },
           ],
         },
       ],

@@ -66,7 +66,7 @@ describe("SmoothScroll gating (freeze-trap)", () => {
   it("constructs Lenis with the ONE-rAF-loop / lerp-only invariants (mock-realism pin)", () => {
     render(<SmoothScroll />);
     act(() => setSceneLive(true));
-    expect(instances[0].opts).toMatchObject({
+    expect(instances[0].opts).toStrictEqual({
       autoRaf: false,
       lerp: 0.1,
       smoothWheel: true,
