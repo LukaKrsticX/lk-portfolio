@@ -8,6 +8,7 @@ import { lenisRef, setSceneLive } from "@/lib/scroll";
  * (unmounts with SceneBoundary errors too). addEffect runs before useFrame and
  * before render each rAF tick, with a ms DOMHighResTimeStamp — exactly what
  * lenis.raf(time) wants, so useFrame consumers read fresh scroll same-frame.
+ * Mount exactly once — the scene-live store is a boolean latch, not a refcount; a second Canvas root would kill Lenis when the first unmounts.
  */
 export function RafBridge() {
   useEffect(() => {

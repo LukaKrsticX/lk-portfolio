@@ -1,6 +1,6 @@
 import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { setSceneLive } from "@/lib/scroll";
+import { lenisRef, setSceneLive } from "@/lib/scroll";
 import { isPlainHashClick, SmoothScroll } from "./SmoothScroll";
 
 const { instances } = vi.hoisted(() => ({ instances: [] as Array<Record<string, unknown>> }));
@@ -53,6 +53,25 @@ describe("SmoothScroll gating (freeze-trap)", () => {
     expect(instances).toHaveLength(1);
     act(() => setSceneLive(false));
     expect(instances[0].destroyed).toBe(true);
+  });
+
+  it("wires lenisRef for the rAF feed while live and clears it on death (freeze-trap guard)", () => {
+    render(<SmoothScroll />);
+    act(() => setSceneLive(true));
+    expect(lenisRef.current).toBe(instances[0]);
+    act(() => setSceneLive(false));
+    expect(lenisRef.current).toBeNull();
+  });
+
+  it("constructs Lenis with the ONE-rAF-loop / lerp-only invariants (mock-realism pin)", () => {
+    render(<SmoothScroll />);
+    act(() => setSceneLive(true));
+    expect(instances[0].opts).toMatchObject({
+      autoRaf: false,
+      lerp: 0.1,
+      smoothWheel: true,
+      syncTouch: false,
+    });
   });
 
   it("never constructs under prefers-reduced-motion", () => {

@@ -45,6 +45,27 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    // Chunk-budget guard: fiber+three must stay confined to src/components/gl/**
+    // (a migration into first-load code would keep the CI total-size budget
+    // green while defeating the whole point of splitting GL into its own chunk).
+    files: ["src/**"],
+    ignores: ["src/components/gl/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@react-three/fiber", "three"],
+              message:
+                "GL-only — @react-three/fiber and three must stay inside src/components/gl/** or they'll bloat the first-load chunk. Talk to GL via src/lib/scroll.ts instead.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

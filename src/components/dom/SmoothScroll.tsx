@@ -1,4 +1,5 @@
 "use client";
+// NEVER import "@react-three/fiber" (or anything from src/components/gl/) here — it would pull fiber+three into the first-load chunk. GL side talks to us only via src/lib/scroll.ts.
 import Lenis from "lenis";
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { debugFlag } from "@/lib/debug-flags";
