@@ -3,17 +3,18 @@
        The card-suit diamond is PROMOTED from pip to enclosure — a lozenge
        frame around the whole lockup (roundel role). Operator revision over
        candidate A: taller-than-wide, 0.83 w:h (outer half-diagonals 48x58,
-       "Skyrim direction, softened") — restores the v4 judge-panel karo
-       proportion signature (0.78) while keeping sharp edges. Letters are
+       "Skyrim direction, softened") — moves back toward the v4 judge-panel
+       0.78 karo proportion signature while keeping sharp edges. Letters are
        the v4 paths uniformly scaled 0.51 about the old bbox center
        (58.5,49), recentered at (50,60); the 45-degree K bands and the
        gap-7 chevron relationship survive uniform scale (gap now 3.57).
        Inner ring 41.5x50.2 half-diagonals for ~5 units perpendicular
-       stroke vs the letters' 14 (frame reads lighter). Corner clearance
-       letters-to-frame ~4.2 perpendicular. Inner subpath is wound opposite
-       the outer so hole assignment survives either fill rule. The bake
-       normalizes height (tallest extent -> y ±1 world), so this frame
-       renders 2.0 world tall x 1.655 wide. -->
+       stroke vs the letters' ~7.1 — v4's 14 at the 0.51 scale (frame
+       reads lighter). Corner clearance letters-to-frame ~4.2
+       perpendicular. Inner subpath is wound opposite the outer so hole
+       assignment survives either fill rule. The bake normalizes height
+       (tallest extent -> y ±1 world), so this frame renders 2.0 world
+       tall x 1.655 wide. -->
   <path d="M2 60 L50 2 L98 60 L50 118 Z M8.5 60 L50 110.2 L91.5 60 L50 9.8 Z"/>
   <path d="M30.37 40.11 H37.5 V72.75 H50.77 V79.89 H30.37 Z"/>
   <path d="M41.08 58.47 L59.44 40.11 H69.64 L51.28 58.47 L69.64 76.83 H59.44 Z"/>

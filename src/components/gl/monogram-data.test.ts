@@ -3,8 +3,7 @@ import { MONOGRAM_SHAPES } from "./monogram-data";
 
 describe("baked monogram data", () => {
   it("has the frame ring plus L and K shapes (v5 lockup)", () => {
-    expect(MONOGRAM_SHAPES.length).toBeGreaterThanOrEqual(2);
-    expect(MONOGRAM_SHAPES.length).toBeLessThanOrEqual(12);
+    expect(MONOGRAM_SHAPES).toHaveLength(3);
   });
   it("bakes the frame as a ring — exactly one shape carries exactly one hole", () => {
     const withHoles = MONOGRAM_SHAPES.filter((s) => s.holes.length > 0);
