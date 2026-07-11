@@ -48,4 +48,10 @@ describe("DOM layer", () => {
       );
     }
   });
+  it("every section is a programmatic focus target (tabIndex -1)", () => {
+    render(<Sections />);
+    for (const id of ["hero", "services", "work", "process", "about", "contact"]) {
+      expect(document.getElementById(id)).toHaveAttribute("tabindex", "-1");
+    }
+  });
 });

@@ -3,13 +3,13 @@ import { site } from "@/content/site";
 export function Sections() {
   return (
     <main>
-      <section id="hero">
+      <section id="hero" tabIndex={-1}>
         <p className="mono">Luka Krstić — creative developer</p>
         <h1>{site.positioning}</h1>
         <p className="mono" style={{ marginTop: "2rem" }}>Belgrade — UK +1h · US-East +6h</p>
       </section>
 
-      <section id="services">
+      <section id="services" tabIndex={-1}>
         <h2>Services</h2>
         <div className="grid">
           {site.services.map((s) => (
@@ -27,7 +27,7 @@ export function Sections() {
         </div>
       </section>
 
-      <section id="work">
+      <section id="work" tabIndex={-1}>
         <h2>Selected work</h2>
         <div className="grid">
           {site.cases.map((c) => (
@@ -49,17 +49,17 @@ export function Sections() {
         </div>
       </section>
 
-      <section id="process">
+      <section id="process" tabIndex={-1}>
         <h2>Process</h2>
         <p style={{ color: "var(--text-dim)" }}>Audit → fix → stand behind. {site.agencies.mapping}</p>
       </section>
 
-      <section id="about">
+      <section id="about" tabIndex={-1}>
         <h2>About</h2>
         <p style={{ color: "var(--text-dim)" }}>{site.about}</p>
       </section>
 
-      <section id="contact">
+      <section id="contact" tabIndex={-1}>
         <h2>Contact</h2>
         <p>
           <a href={`mailto:${site.contact.email}`}>{site.contact.email}</a>
