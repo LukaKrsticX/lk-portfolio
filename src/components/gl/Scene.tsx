@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import type { Tier } from "@/lib/quality";
 import { DPR_CAP } from "@/lib/quality";
 import { Hero } from "./Hero";
+import { RafBridge } from "./RafBridge";
 
 export default function Scene({ tier, onDemote }: { tier: Tier; onDemote: () => void }) {
   const [ready, setReady] = useState(false);
@@ -33,6 +34,7 @@ export default function Scene({ tier, onDemote }: { tier: Tier; onDemote: () => 
             `flipped` counter increments on incline even with onIncline omitted,
             so a reachable upper bound would flag healthy 60Hz machines. */}
         <PerformanceMonitor bounds={() => [50, 1000]} onDecline={onDemote} />
+        <RafBridge />
         <Hero tier={tier} onReady={handleReady} />
       </Canvas>
     </div>

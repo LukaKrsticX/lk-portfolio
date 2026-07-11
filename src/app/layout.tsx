@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${mono.variable} ${display.variable}`}>
+    <html lang="en" className={`${mono.variable} ${display.variable}`} data-scroll-behavior="smooth">
       <body>
         <noscript>
           <style>{`[data-loader]{display:none}`}</style>
