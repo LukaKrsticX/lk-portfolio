@@ -12,6 +12,26 @@ describe("debugFlag", () => {
   });
 });
 
+describe("debugFlag scroll", () => {
+  it("defaults to enabled", () => {
+    expect(debugFlag("scroll", "")).toBe(true);
+    expect(debugFlag("scroll", "?other=0")).toBe(true);
+  });
+  it("=0 disables", () => {
+    expect(debugFlag("scroll", "?scroll=0")).toBe(false);
+  });
+});
+
+describe("debugFlag choreo", () => {
+  it("defaults to enabled", () => {
+    expect(debugFlag("choreo", "")).toBe(true);
+    expect(debugFlag("choreo", "?other=0")).toBe(true);
+  });
+  it("=0 disables", () => {
+    expect(debugFlag("choreo", "?choreo=0")).toBe(false);
+  });
+});
+
 describe("debugTier", () => {
   it("returns a valid tier override or null", () => {
     expect(debugTier("?tier=med")).toBe("med");
