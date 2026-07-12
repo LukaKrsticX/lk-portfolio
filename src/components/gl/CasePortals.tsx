@@ -63,31 +63,84 @@ void main() {
   // fast ones are already gone — the lingerers ARE the mid-transition skeleton.
   // Deterministic (aRand is a baked attribute): scrubbing back rewinds exactly.
   float prog = clamp(uProgress * (0.7 + 0.6 * aRand), 0.0, 1.0);
+  // Squared tier gate for the stretch/tumble terms below: high/med (1.0)
+  // pass through, low (0.15 → 0.0225) crushes them to ~nothing so the single
+  // 1×1 quad keeps its gentle crossfade read instead of warping.
+  float gate2 = uScatterScale * uScatterScale;
   // Per-shard yaw jitter: spin the quad's local XY around the shard center —
   // plain sin/cos, no matrices, zero per-frame CPU writes. Gated by
   // uScatterScale so the low tier's single quad tips gently instead of
-  // slewing the whole card (up to ±1.2 rad reads as a fling at 1×1).
-  float ang = uProgress * (aRand - 0.5) * 2.4 * uScatterScale;
+  // slewing the whole card. Span cut 2.4 → 0.7 rad now that the slat
+  // tumble below carries the rotational read — in-plane spin visibly breaks
+  // the horizontal slice lines (screenshot pass read as confetti at 1.2).
+  float ang = uProgress * (aRand - 0.5) * 0.7 * uScatterScale;
   float sa = sin(ang);
   float ca = cos(ang);
   vec2 spun = vec2(position.x * ca - position.y * sa, position.x * sa + position.y * ca);
-  // Place the cell-sized quad at its grid slot, centered on the card origin.
-  vec2 cell = uCard / uGrid;
-  vec3 pos = vec3(spun, position.z) + vec3((aGrid + 0.5) * cell - 0.5 * uCard, 0.0);
   // Displacement drive = prog² (perceptual gamma): aOffset spans ±1.5 world
   // ≈ a full card width, so even 4% LINEAR progress would separate every
   // shard by more than a shard — the assembled read would exist only in a
   // razor-thin scrub band. Squaring keeps cards readable-whole near the
   // settled ends while preserving the full mid-flight fling (disp(1) = 1).
   float disp = prog * prog;
-  // Scatter: aOffset is tangent-biased (x ±1.5, y ±0.6, z ±0.4 — portal.ts).
-  vec3 scatter = aOffset * disp;
   // Row-shear bias: every shard in a row shares this x term, so rows shear as
   // intact horizontal slices and mid-transition reads as a sliced column
   // ("eksplozija sa kosturom"), not confetti. 1.1 = total shear span in world
   // units from top row to bottom row at full shatter (~2/3 card width — wide
   // enough to read as slices, narrow enough that rows stay visually related).
-  scatter.x += (aGrid.y / uGrid.y - 0.5) * 1.1 * disp;
+  float shearX = (aGrid.y / uGrid.y - 0.5) * 1.1;
+  // Per-row lateral drift (row coherence, pure function of aGrid.y): a slow
+  // sin across rows so the sheared column waves instead of collapsing into a
+  // perfect diagonal — rows still travel as related slices. 0.35 = peak drift
+  // in world units; 0.9 rad/row phase step ≈ 7-row period, so neighbouring
+  // rows drift together rather than alternating.
+  float rowDrift = sin(aGrid.y * 0.9) * 0.35;
+  // Per-row vertical fan (row coherence): rows peel apart vertically as
+  // intact slats — bottom rows sink, top rows lift. 0.5 = full-disp fan span
+  // in world units (half a card height of extra separation).
+  float rowFan = (aGrid.y / uGrid.y - 0.5) * 0.5;
+  // Planar velocity per unit disp. aOffset is tangent-biased (x ±1.5, y ±0.6,
+  // z ±0.4 — portal.ts); per-shard x damped ×0.45 and y ×0.25 so the row
+  // terms (shear + drift + fan) dominate — per-shard scatter only roughens
+  // slice edges. Screenshot passes: undamped y read as confetti (shards left
+  // their row bands, slat skeleton dissolved); x at 0.55 still spread the
+  // column too wide — 0.45 keeps slices stacked, closer to the reel's column.
+  vec2 vel = vec2(aOffset.x * 0.45 + shearX + rowDrift, aOffset.y * 0.25 + rowFan);
+  vec3 scatter = vec3(vel, aOffset.z) * disp;
+  // Velocity stretch (the motion-blur read): elongate the quad along its own
+  // planar motion direction — the true drive vel, so sheared rows smear
+  // horizontally and reinforce the slat read. Magnitude scales with
+  // disp × speed: EXACTLY 0 when settled (prog=0 → disp=0, cards stay
+  // pixel-crisp) and peaks mid-flight. Pure function of uProgress +
+  // baked attributes — scrub rewind stays exact.
+  float speed = length(vel);
+  // Degenerate-direction guard: near-zero planar motion → step() zeroes the
+  // stretch and max() keeps the normalize divide away from ~0.
+  vec2 vdir = vel / max(speed, 1e-3) * step(1e-3, speed);
+  // 2.2 = stretch gain: a typical shard (speed ≈ 0.8) elongates ~2.8× along
+  // its motion axis at full flight — 0.9 didn't read at all in screenshots
+  // (shards stayed square); 2.2 gives the heavy smear of the reference reel
+  // while settled ends stay crisp (disp → 0). gate2 spares the low tier.
+  spun += vdir * dot(spun, vdir) * (2.2 * disp * speed * gate2);
+  // Slat tumble: rotate about the local X (row) axis so slices tip like
+  // window slats — the 3D read the flat yaw spin lacked. Row-coherent term
+  // sin(aGrid.y * 0.9 + 0.6): deterministic −1..1 per row with a ≈7-row
+  // period, so neighbouring rows tumble in related directions and the
+  // sliced-column skeleton survives the rotation; the smaller aRand jitter
+  // keeps rows from reading robotically rigid. 1.1 rad row span (+0.35
+  // jitter ≈ 73° max) keeps almost every slat short of the 90° flip — at
+  // 1.7 rad half the debris showed its dark back mid-transition and the
+  // whole mid-state went near-black; the fragment back-face slate still
+  // covers the few that pass 90°.
+  float tumble = prog * (1.1 * sin(aGrid.y * 0.9 + 0.6) + 0.35 * (aRand - 0.5)) * gate2;
+  float st = sin(tumble);
+  float ct = cos(tumble);
+  // position.z is 0 on PlaneGeometry, so the X-rotation reduces to
+  // (x, y·cos, y·sin) — no matrix needed.
+  vec3 slat = vec3(spun.x, spun.y * ct, spun.y * st);
+  // Place the cell-sized quad at its grid slot, centered on the card origin.
+  vec2 cell = uCard / uGrid;
+  vec3 pos = slat + vec3((aGrid + 0.5) * cell - 0.5 * uCard, 0.0);
   pos += scatter * uScatterScale;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
   // Shards dim as they scatter but never vanish mid-flight (floor 0.15) —
@@ -103,7 +156,17 @@ varying float vAlpha;
 
 void main() {
   vec4 tex = texture2D(uMap, vShardUv);
-  gl_FragColor = vec4(tex.rgb, vAlpha);
+  // Back faces (slats tumbled past 90°, and whole cards the ring carries
+  // past profile — where the low tier's mirrored capture was flagged) render
+  // as a dark card-back slate instead of a mirrored texture.
+  // vec3(0.039, 0.078, 0.125) = #0a1420, the scene's base color. Full 1.0
+  // mix: 0.85 and even 0.95 remnants still left readable mirrored text on
+  // the low tier's full-card quad (screenshot-verified at 2× zoom) — the
+  // flagged artifact. A uniform dark panel IS the physical card-back read;
+  // the per-shard alpha fade keeps backs from flattening into one mass.
+  float backness = gl_FrontFacing ? 0.0 : 1.0;
+  vec3 col = mix(tex.rgb, vec3(0.039, 0.078, 0.125), backness);
+  gl_FragColor = vec4(col, vAlpha);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }
