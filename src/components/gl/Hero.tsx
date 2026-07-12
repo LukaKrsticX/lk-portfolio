@@ -82,6 +82,7 @@ export function Hero({ tier, onReady }: { tier: Tier; onReady: () => void }) {
     // Scroll signals: derived once per frame (Hero is the single writer), read
     // by HelixRibbon. Must run before the group-null early return so signals
     // keep flowing even on null-ref frames.
+    // (child subscribes first → HelixRibbon reads last frame's values; accepted: one-frame lag on a smooth envelope)
     const y = scrollState.y;
     if (!primed.current) {
       prevY.current = y; // deep-link/restore landing: no first-frame velocity burst
@@ -100,7 +101,7 @@ export function Hero({ tier, onReady }: { tier: Tier; onReady: () => void }) {
       if (sg) {
         sg.position.y = 0.5 * scrollP; // slower-than-DOM parallax lag
         sg.position.z = -0.9 * easeInOutSine(scrollP); // composition recedes (camera-dolly equivalent)
-        sg.rotation.y = 0.3 * Math.sin(scrollP * Math.PI); // half-sweep, returns to 0 at page end
+        sg.rotation.y = 0.15 * Math.sin(scrollP * Math.PI); // half-sweep, returns to 0 at page end
       }
       const mg = monogramGroup.current;
       if (mg) {
