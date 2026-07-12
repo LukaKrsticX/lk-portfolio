@@ -15,7 +15,7 @@ import {
   Vector2,
 } from "three";
 import { site } from "@/content/site";
-import { explodeEnvelope, PORTAL_RING, ringPose, shardScatterAttrs } from "@/lib/portal";
+import { cardRel, PORTAL_RING, ringPose, shardScatterAttrs } from "@/lib/portal";
 import type { Tier } from "@/lib/quality";
 import { scrollSignals } from "@/lib/scroll";
 
@@ -36,9 +36,12 @@ const SHARD_DIMS: Record<Tier, { readonly cols: number; readonly rows: number }>
 // #0a1420 — the hero material's base color, so cards read as scene furniture
 // while the capture loads instead of flashing white.
 const PLACEHOLDER_RGBA = [10, 20, 32, 255] as const;
-// Dissolve amplitude per tier. Low renders one 1×1 "shard": full-strength
-// scatter would fling the entire card, so it gets a gentle push + the alpha
-// fade carries the transition (reads as a crossfade).
+// Flight-displacement amplitude per tier. Low renders one 1×1 "shard": full-
+// strength spine flight would fling the entire card, so it gets a gentle push
+// while the alpha curve carries the transition (reads as a sliding crossfade).
+// The shader also derives its smear/tumble/dust gate from this value — low
+// (0.15) lands below the smoothstep(0.5, 1.0) window, so those terms vanish
+// without a dedicated uniform.
 const SCATTER_SCALE: Record<Tier, number> = { high: 1.0, med: 1.0, low: 0.15 };
 
 // Grid encoding choice: aGrid carries RAW (col, row) indices; cols/rows arrive
@@ -47,127 +50,156 @@ const SCATTER_SCALE: Record<Tier, number> = { high: 1.0, med: 1.0, low: 0.15 };
 const PORTAL_VERT = /* glsl */ `
 uniform vec2 uGrid;         // (cols, rows)
 uniform vec2 uCard;         // card size in world units (1.6, 1.0)
-uniform float uProgress;    // explodeEnvelope(ringPose.t) — the dissolve driver
-uniform float uScatterScale; // tier gate: 1.0 high/med, 0.15 low (gentle push+fade)
+uniform float uRel;         // cardRel(workP, n, i) — signed peel phase: (0,1] departing, [-1,0) arriving
+uniform float uScatterScale; // tier gate: 1.0 high/med, 0.15 low (gentle push + crossfade)
 attribute vec2 aGrid;
 attribute vec3 aOffset;
 attribute float aRand;
 varying vec2 vShardUv;
+varying vec2 vChipUv;
 varying float vAlpha;
+varying float vProg;
 
 void main() {
   // Window this shard's UVs into its (col, row) cell of the full capture.
   vShardUv = (uv + aGrid) / uGrid;
-  // Staggered departure: each shard's effective progress runs at 0.7–1.3× the
-  // card's uProgress. Slow shards (low aRand) linger near their grid slot while
-  // fast ones are already gone — the lingerers ARE the mid-transition skeleton.
-  // Deterministic (aRand is a baked attribute): scrubbing back rewinds exactly.
-  float prog = clamp(uProgress * (0.7 + 0.6 * aRand), 0.0, 1.0);
-  // Squared tier gate for the stretch/tumble terms below: high/med (1.0)
-  // pass through, low (0.15 → 0.0225) crushes them to ~nothing so the single
-  // 1×1 quad keeps its gentle crossfade read instead of warping.
-  float gate2 = uScatterScale * uScatterScale;
-  // Per-shard yaw jitter: spin the quad's local XY around the shard center —
-  // plain sin/cos, no matrices, zero per-frame CPU writes. Gated by
-  // uScatterScale so the low tier's single quad tips gently instead of
-  // slewing the whole card. Span cut 2.4 → 0.7 rad now that the slat
-  // tumble below carries the rotational read — in-plane spin visibly breaks
-  // the horizontal slice lines (screenshot pass read as confetti at 1.2).
-  float ang = uProgress * (aRand - 0.5) * 0.7 * uScatterScale;
-  float sa = sin(ang);
-  float ca = cos(ang);
-  vec2 spun = vec2(position.x * ca - position.y * sa, position.x * sa + position.y * ca);
-  // Displacement drive = prog² (perceptual gamma): aOffset spans ±1.5 world
-  // ≈ a full card width, so even 4% LINEAR progress would separate every
-  // shard by more than a shard — the assembled read would exist only in a
-  // razor-thin scrub band. Squaring keeps cards readable-whole near the
-  // settled ends while preserving the full mid-flight fling (disp(1) = 1).
-  float disp = prog * prog;
-  // Row-shear bias: every shard in a row shares this x term, so rows shear as
-  // intact horizontal slices and mid-transition reads as a sliced column
-  // ("eksplozija sa kosturom"), not confetti. 1.1 = total shear span in world
-  // units from top row to bottom row at full shatter (~2/3 card width — wide
-  // enough to read as slices, narrow enough that rows stay visually related).
-  float shearX = (aGrid.y / uGrid.y - 0.5) * 1.1;
-  // Per-row lateral drift (row coherence, pure function of aGrid.y): a slow
-  // sin across rows so the sheared column waves instead of collapsing into a
-  // perfect diagonal — rows still travel as related slices. 0.35 = peak drift
-  // in world units; 0.9 rad/row phase step ≈ 7-row period, so neighbouring
-  // rows drift together rather than alternating.
-  float rowDrift = sin(aGrid.y * 0.9) * 0.35;
-  // Per-row vertical fan (row coherence): rows peel apart vertically as
-  // intact slats — bottom rows sink, top rows lift. 0.5 = full-disp fan span
-  // in world units (half a card height of extra separation).
-  float rowFan = (aGrid.y / uGrid.y - 0.5) * 0.5;
-  // Planar velocity per unit disp. aOffset is tangent-biased (x ±1.5, y ±0.6,
-  // z ±0.4 — portal.ts); per-shard x damped ×0.45 and y ×0.25 so the row
-  // terms (shear + drift + fan) dominate — per-shard scatter only roughens
-  // slice edges. Screenshot passes: undamped y read as confetti (shards left
-  // their row bands, slat skeleton dissolved); x at 0.55 still spread the
-  // column too wide — 0.45 keeps slices stacked, closer to the reel's column.
-  vec2 vel = vec2(aOffset.x * 0.45 + shearX + rowDrift, aOffset.y * 0.25 + rowFan);
-  vec3 scatter = vec3(vel, aOffset.z) * disp;
-  // Velocity stretch (the motion-blur read): elongate the quad along its own
-  // planar motion direction — the true drive vel, so sheared rows smear
-  // horizontally and reinforce the slat read. Magnitude scales with
-  // disp × speed: EXACTLY 0 when settled (prog=0 → disp=0, cards stay
-  // pixel-crisp) and peaks mid-flight. Pure function of uProgress +
-  // baked attributes — scrub rewind stays exact.
-  float speed = length(vel);
-  // Degenerate-direction guard: near-zero planar motion → step() zeroes the
-  // stretch and max() keeps the normalize divide away from ~0.
-  vec2 vdir = vel / max(speed, 1e-3) * step(1e-3, speed);
-  // 2.2 = stretch gain: a typical shard (speed ≈ 0.8) elongates ~2.8× along
-  // its motion axis at full flight — 0.9 didn't read at all in screenshots
-  // (shards stayed square); 2.2 gives the heavy smear of the reference reel
-  // while settled ends stay crisp (disp → 0). gate2 spares the low tier.
-  spun += vdir * dot(spun, vdir) * (2.2 * disp * speed * gate2);
-  // Slat tumble: rotate about the local X (row) axis so slices tip like
-  // window slats — the 3D read the flat yaw spin lacked. Row-coherent term
-  // sin(aGrid.y * 0.9 + 0.6): deterministic −1..1 per row with a ≈7-row
-  // period, so neighbouring rows tumble in related directions and the
-  // sliced-column skeleton survives the rotation; the smaller aRand jitter
-  // keeps rows from reading robotically rigid. 1.1 rad row span (+0.35
-  // jitter ≈ 73° max) keeps every slat short of a 90° flip on its own — at
-  // 1.7 rad half the debris showed its dark back mid-transition and the
-  // whole mid-state went near-black. Backfaces still occur where tumble
-  // composes with the ring yaw (mesh.rotation.y); the fragment slate
-  // covers those.
-  float tumble = prog * (1.1 * sin(aGrid.y * 0.9 + 0.6) + 0.35 * (aRand - 0.5)) * gate2;
+  // Raw plane uv: the fragment's dust-mote mask needs a per-chip 0..1 frame.
+  vChipUv = uv;
+  // D = dissolve amount; edge = inner-edge sign in card-local x. The
+  // departing card (uRel > 0) exits screen-left, so its inner edge — the
+  // side facing the between-cards gap where the dust spine lives — is +x;
+  // the arriving card mirrors to -x. step() not sign(): sign(0.0) is 0.0
+  // and would collapse the spine target to the card center; at uRel = 0,
+  // D = 0 zeroes every peel term, so edge's value there is moot.
+  float D = abs(uRel);
+  float edge = 2.0 * step(0.0, uRel) - 1.0;
+  // Column-ordered wavefront: colPhase 0 = first column to peel (inner
+  // edge), 1 = last. Departing peels right-to-left (1-nx); arriving runs
+  // the same front backwards as D shrinks, so its far edge solidifies
+  // first and the inner edge condenses last. The low tier's single column
+  // pins to 0.5 so its whole-card "peel" runs mid-window.
+  float nx = aGrid.x / max(uGrid.x - 1.0, 1.0);
+  float colPhase = (uGrid.x < 1.5) ? 0.5 : mix(nx, 1.0 - nx, step(0.0, uRel));
+  // BAND = traveling-front width in colPhase units (tunable 0.25-0.45):
+  // 0.28 keeps only a narrow band of columns mid-peel at any D (the reel's
+  // read — the rest of the card stays whole; 0.35 bridged too many columns
+  // across the gap at once). The D*(1+BAND) span makes D=0 → all settled
+  // and D=1 → all dust exact.
+  const float BAND = 0.28;
+  float shardProg = clamp((D * (1.0 + BAND) - colPhase) / BAND, 0.0, 1.0);
+  // Perceptual gamma on flight: linear progress separates chips almost
+  // immediately; squaring keeps chips near their slot as the front arrives
+  // while preserving the full displacement at shardProg = 1.
+  float flight = shardProg * shardProg;
+  // Tier gate derived from the existing uniform (no new uniform): low
+  // (0.15) → 0, med/high (1.0) → 1. Low keeps the alpha curve, rounded
+  // corners and dark backs but drops smear/tumble/shrink/stretch — the
+  // single full-card quad reads as a sliding crossfade, not a warp.
+  float g = smoothstep(0.5, 1.0, uScatterScale);
+  // Settled slot center of this chip in card-local space.
+  vec2 cell = uCard / uGrid;
+  vec2 slot = (aGrid + 0.5) * cell - 0.5 * uCard;
+  // THE spine: peeled chips converge on a narrow vertical x-band just past
+  // the inner edge — 0.5*uCard.x is the edge itself, +0.30 clears the gap
+  // so the column floats between cards, +0.35*aRand keeps the band a band,
+  // not a line. They spread vertically past the card (aOffset.y spans
+  // ±0.6, ×1.1 → ±0.66 ≈ beyond the 1.0 card height), rise as dust
+  // (0.7·flight² — quadratic so lift accelerates late and reads as dust
+  // buoyancy, not launch), and jitter in depth (aOffset.z ×0.35 damped so
+  // the spine stays a column, not a cloud).
+  float targetX = edge * (0.5 * uCard.x + 0.30 + 0.35 * aRand);
+  vec3 disp = vec3(
+    (targetX - slot.x) * flight,
+    aOffset.y * 1.1 * flight + 0.7 * flight * flight * (0.3 + aRand),
+    aOffset.z * 0.35 * flight
+  );
+  // Chip shrink toward dust: chips end at 0.55× so the spine reads as
+  // motes, not tiles. Gated on low so the full-card quad never scale-pulses.
+  vec2 local = position.xy * (1.0 - 0.45 * shardProg * g);
+  // Whole-card smear — the reel's headline read: the not-yet-peeled part
+  // stretches horizontally while the card slides. sin(π·D) pins smear to
+  // exactly 1 at both settled ends (tiling stays seamless); (1 - shardProg)
+  // exempts chips already in flight; 0.9 gain ≈ 1.9× peak width — the
+  // overlap between neighbour columns IS the cheap motion-blur echo (2.2
+  // garbled the capture's text into mush even at D = 0.1 in screenshots).
+  local.x *= 1.0 + 0.9 * sin(3.14159 * D) * (1.0 - shardProg) * g;
+  // In-flight velocity stretch: chips streak along their flight direction
+  // mid-flight. sin(π·shardProg) is exactly 0 at both ends, so settled
+  // chips and landed dust stay unstretched; 0.7 gain ≈ 1.7× peak
+  // elongation (1.4 streaked the mostly-horizontal flights so wide the
+  // spine read as a debris field). Degenerate-direction guard: near-zero displacement →
+  // step() zeroes the stretch and max() keeps the divide away from ~0.
+  float speed = length(disp.xy);
+  vec2 fdir = disp.xy / max(speed, 1e-3) * step(1e-3, speed);
+  local += fdir * dot(local, fdir) * (0.7 * sin(3.14159 * shardProg) * g);
+  // Hard tumble about the local X (row) axis inside the spine: the row-
+  // coherent sin term (0.9 rad/row ≈ 7-row period) keeps neighbours
+  // tumbling in related directions; 1.6 rad row span + 1.0 rad jitter
+  // deliberately flips many chips past 90° — the fragment's dark card-back
+  // slate makes those flashes read physical, like the reel's tumbling
+  // debris. Gated on low so the whole card never somersaults.
+  float tumble = shardProg * (1.6 * sin(aGrid.y * 0.9 + 0.6) + 1.0 * (aRand - 0.5)) * g;
   float st = sin(tumble);
   float ct = cos(tumble);
   // position.z is 0 on PlaneGeometry, so the X-rotation reduces to
   // (x, y·cos, y·sin) — no matrix needed.
-  vec3 slat = vec3(spun.x, spun.y * ct, spun.y * st);
-  // Place the cell-sized quad at its grid slot, centered on the card origin.
-  vec2 cell = uCard / uGrid;
-  vec3 pos = slat + vec3((aGrid + 0.5) * cell - 0.5 * uCard, 0.0);
-  pos += scatter * uScatterScale;
+  vec3 chip = vec3(local.x, local.y * ct, local.y * st);
+  // SETTLED-STATE PURITY (uRel = 0): D = 0 → shardProg = 0 → flight = 0 →
+  // disp = (0,0,0); smear = 1 + 2.2·sin(0)·… = 1; shrink = 1 - 0 = 1;
+  // stretch adds fdir·(…)·sin(0) = 0; tumble = 0 → chip = position.xy;
+  // vAlpha = (1 - 0)·(1 - smoothstep(0.72, 1, 0)) = 1; vProg = 0 disables
+  // the fragment dust mask. The card is its exact untransformed,
+  // seamlessly tiled capture (plus the rounded-corner mask).
+  vec3 pos = vec3(chip.xy + slot, chip.z) + disp * uScatterScale;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-  // Shards dim as they scatter but never vanish mid-flight (floor 0.15) —
-  // debris stays readable as it bridges outgoing → incoming card.
-  vAlpha = 1.0 - prog * 0.85;
+  // Chips dim in flight (0.22 floor keeps the spine readable), then the
+  // whole dust cloud dissipates across the last 28% of the phase — a fully
+  // departed card is INVISIBLE. This is what makes the peel directional:
+  // the outgoing card never reassembles, it fades out as dust.
+  vAlpha = (1.0 - 0.78 * shardProg) * (1.0 - smoothstep(0.72, 1.0, D));
+  vProg = shardProg;
 }
 `;
 
 const PORTAL_FRAG = /* glsl */ `
 uniform sampler2D uMap;
+uniform vec2 uCard;
+uniform float uScatterScale;
 varying vec2 vShardUv;
+varying vec2 vChipUv;
 varying float vAlpha;
+varying float vProg;
 
 void main() {
   vec4 tex = texture2D(uMap, vShardUv);
-  // Back faces (slats tumbled past 90°, and whole cards the ring carries
-  // past profile — where the low tier's mirrored capture was flagged) render
-  // as a dark card-back slate instead of a mirrored texture.
-  // vec3(0.039, 0.078, 0.125) = #0a1420, the scene's base color. Full 1.0
-  // mix: 0.85 and even 0.95 remnants still left readable mirrored text on
-  // the low tier's full-card quad (screenshot-verified at 2× zoom) — the
-  // flagged artifact. A uniform dark panel IS the physical card-back read;
-  // the per-shard alpha fade keeps backs from flattening into one mass.
+  // Back faces (chips tumbled past 90°, and whole cards the ring carries
+  // past profile) render as a dark card-back slate instead of a mirrored
+  // texture. vec3(0.039, 0.078, 0.125) = #0a1420, the scene's base color.
+  // Full 1.0 mix: partial mixes left readable mirrored text on the low
+  // tier's full-card quad (screenshot-verified at 2× zoom). A uniform dark
+  // panel IS the physical card-back read; the per-chip alpha fade keeps
+  // backs from flattening into one mass.
   float backness = gl_FrontFacing ? 0.0 : 1.0;
   vec3 col = mix(tex.rgb, vec3(0.039, 0.078, 0.125), backness);
-  gl_FragColor = vec4(col, vAlpha);
+  // Rounded corners (reel parity, all tiers): rounded-rect SDF in card
+  // space over the FULL-card uv, so the mask tiles seamlessly across the
+  // shard grid. 0.05 world corner radius ≈ the reel's rounding at this
+  // card size; 0.008 feather ≈ 1px at the settled framing — soft enough
+  // not to alias, tight enough to stay crisp.
+  vec2 p = (vShardUv - 0.5) * uCard;
+  vec2 q = abs(p) - (0.5 * uCard - vec2(0.05));
+  float sdf = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - 0.05;
+  float alpha = vAlpha * (1.0 - smoothstep(0.0, 0.008, sdf));
+  // Dust softening: in-flight chips melt their square silhouette into a
+  // round mote — radial mask over the chip's own 0..1 uv, solid inside
+  // r 0.15, gone past 0.65. ×0.85 keeps a hint of the square so motes
+  // still catch texture. vProg-gated: settled chips (vProg = 0) are
+  // EXACTLY mask-free, so the tiled card stays seamless. The tier gate
+  // (same smoothstep as the vertex stage) kills it on low, where a
+  // full-card round mote would read as a vignette.
+  float dustGate = smoothstep(0.5, 1.0, uScatterScale);
+  alpha *= mix(1.0, 1.0 - smoothstep(0.15, 0.65, length(vChipUv - 0.5)), vProg * 0.85 * dustGate);
+  gl_FragColor = vec4(col, alpha);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }
@@ -190,14 +222,17 @@ function makePlaceholder(): DataTexture {
 }
 
 /**
- * Case-study captures as shard-grid cards on a scroll-scrubbed ring (S4).
- * The shard dissolve is live: mid-transition the outgoing card shears into a
- * sliced column of debris while the incoming card assembles from the same
- * envelope (explodeEnvelope is symmetric in t, so both are shattered mid-way
- * and whole at rest — the debris bridges the swap). Everything is a pure
- * function of uProgress, assigned per frame: scrubbing up rewinds exactly.
- * Mounted OUTSIDE Hero's scrollGroup so the recede-dolly/sway never move the
- * portals.
+ * Case-study captures as shard-grid cards on a scroll-scrubbed ring (S4),
+ * transitioning via a DIRECTIONAL PEEL (reel parity — activetheory.net/work):
+ * the departing card stays whole and horizontally smeared while a traveling
+ * wavefront peels it column-by-column from its inner edge; peeled chips
+ * tumble into a narrow vertical dust spine between the cards, rise, shrink
+ * and soften into round motes, then the whole cloud fades — the outgoing
+ * card NEVER reassembles. The arriving card runs the same math in reverse
+ * (condenses from dust, far edge solidifying first). Driven per card by the
+ * signed uRel = cardRel(workP, n, i), assigned per frame from pure
+ * functions: scrubbing up rewinds the peel exactly. Mounted OUTSIDE Hero's
+ * scrollGroup so the recede-dolly/sway never move the portals.
  */
 export function CasePortals({ tier }: { tier: Tier }) {
   const groupRef = useRef<Group>(null);
@@ -224,7 +259,7 @@ export function CasePortals({ tier }: { tier: Tier }) {
       const material = new ShaderMaterial({
         uniforms: {
           uMap: { value: placeholder },
-          uProgress: { value: 0 },
+          uRel: { value: 0 },
           uGrid: { value: new Vector2(cols, rows) },
           uCard: { value: new Vector2(CARD_W, CARD_H) },
           uScatterScale: { value: SCATTER_SCALE[tier] },
@@ -232,10 +267,10 @@ export function CasePortals({ tier }: { tier: Tier }) {
         vertexShader: PORTAL_VERT,
         fragmentShader: PORTAL_FRAG,
         side: DoubleSide,
-        // CONSTANT transparency for the shard alpha fade: toggling `transparent`
+        // CONSTANT transparency for the peel alpha fade: toggling `transparent`
         // mid-scrub would bump material.version → full program recompile hitch
         // (same discipline as Hero's iridescence note). depthWrite off so dimmed
-        // shards don't punch holes in each other; the scene behind is dark, so
+        // chips don't punch holes in each other; the scene behind is dark, so
         // settled cards (vAlpha = 1.0) still read fully opaque and crisp.
         transparent: true,
         depthWrite: false,
@@ -279,18 +314,24 @@ export function CasePortals({ tier }: { tier: Tier }) {
       // Ring placement — every component ASSIGNED per frame, never accumulated
       // (scrub up rewinds exactly). Sign choice: +cos puts the yaw-0 (active)
       // card on the camera side of the ring (world z ≈ GROUP_Z + radius), so
-      // the settled card is nearest the camera; rotation.y = yaw faces each
-      // card radially outward — straight at the camera when yaw is 0.
+      // the settled card is nearest the camera.
       mesh.position.x = Math.sin(pose.yaw) * PORTAL_RING.radius;
       mesh.position.y = 0;
       mesh.position.z = Math.cos(pose.yaw) * PORTAL_RING.radius;
       mesh.rotation.x = 0;
-      mesh.rotation.y = pose.yaw;
+      // Rotation cap ×0.45 (reel parity): cards keep facing mostly
+      // camera-ward while they slide. Full ring yaw put the mid-scrub card
+      // edge-on to the camera — a dead zone where both cards collapsed into
+      // lines; 0.45 keeps enough turn to sell the ring without ever going
+      // profile. Position math stays on the full yaw, so the slide path is
+      // unchanged.
+      mesh.rotation.y = pose.yaw * 0.45;
       mesh.rotation.z = PORTAL_RING.tiltZ;
-      // Dissolve driver: ringPose.t is identical for every card at a given
-      // workP, so outgoing AND incoming shatter together mid-transition and
-      // both settle whole at t's saw-wrap (envelope 0 at both ends).
-      cards[i].material.uniforms.uProgress.value = explodeEnvelope(pose.t);
+      // Peel driver: signed per-card phase. Departing (rel > 0) peels
+      // inner-edge-first into the dust spine and never reassembles (the
+      // cloud fades near |rel| = 1); arriving (rel < 0) condenses in
+      // reverse, far edge first. Pure function of workP — scrub-safe.
+      cards[i].material.uniforms.uRel.value = cardRel(workP, n, i);
     }
   });
 

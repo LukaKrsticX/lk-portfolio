@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  PORTAL_RING,
-  explodeEnvelope,
-  mulberry32,
-  ringPose,
-  shardScatterAttrs,
-} from "./portal";
+import { PORTAL_RING, cardRel, mulberry32, ringPose, shardScatterAttrs } from "./portal";
 
 const TWO_PI = Math.PI * 2;
 
@@ -36,20 +30,18 @@ describe("mulberry32", () => {
 });
 
 describe("ringPose", () => {
-  it("workP=0: card 0 faces camera (yaw 0, active, settled)", () => {
+  it("workP=0: card 0 faces camera (yaw 0, active)", () => {
     for (const count of [2, 5]) {
       const pose = ringPose(0, count, 0);
       expect(pose.yaw).toBeCloseTo(0, 9);
       expect(pose.active).toBe(true);
-      expect(pose.t).toBeCloseTo(0, 9);
     }
   });
-  it("workP=1: card count-1 faces camera (yaw 0, active, settled)", () => {
+  it("workP=1: card count-1 faces camera (yaw 0, active)", () => {
     for (const count of [2, 5]) {
       const pose = ringPose(1, count, count - 1);
       expect(pose.yaw).toBeCloseTo(0, 9);
       expect(pose.active).toBe(true);
-      expect(pose.t).toBeCloseTo(0, 9);
     }
   });
   it("spaces cards by 2π/count and only the nearest is active", () => {
@@ -75,19 +67,6 @@ describe("ringPose", () => {
       }
     }
   });
-  it("t ramps 0→1 within a segment and resets at the join (wrap is masked by explodeEnvelope)", () => {
-    const count = 5;
-    const join = 1 / (count - 1);
-    // mid-segment: t is the fractional slot progress
-    expect(ringPose(join / 2, count, 0).t).toBeCloseTo(0.5, 6);
-    // approaching the join t→1, past it t→0 — the saw wrap
-    expect(ringPose(join - 1e-4, count, 0).t).toBeGreaterThan(0.999);
-    expect(ringPose(join + 1e-4, count, 0).t).toBeLessThan(0.001);
-    // composed envelope stays continuous through the wrap
-    const lo = explodeEnvelope(ringPose(join - 1e-4, count, 0).t);
-    const hi = explodeEnvelope(ringPose(join + 1e-4, count, 0).t);
-    expect(hi).toBeCloseTo(lo, 3);
-  });
   it("is scrub-safe: pure function of inputs (same args, same pose)", () => {
     const a = ringPose(0.37, 5, 2);
     const b = ringPose(0.37, 5, 2);
@@ -98,8 +77,58 @@ describe("ringPose", () => {
       const pose = ringPose(workP, 1, 0);
       expect(pose.yaw).toBe(0);
       expect(pose.active).toBe(true);
-      expect(pose.t).toBe(0);
     }
+  });
+});
+
+describe("cardRel", () => {
+  it("workP=0 with two cards: card 0 settled, card 1 fully dust on the arriving side", () => {
+    expect(cardRel(0, 2, 0)).toBe(0);
+    expect(cardRel(0, 2, 1)).toBe(-1);
+  });
+  it("workP=1 with two cards: card 0 fully departed, card 1 settled", () => {
+    expect(cardRel(1, 2, 0)).toBe(1);
+    expect(cardRel(1, 2, 1)).toBe(0);
+  });
+  it("midpoint with two cards: card 0 half-departed, card 1 half-arrived", () => {
+    expect(cardRel(0.5, 2, 0)).toBeCloseTo(0.5, 9);
+    expect(cardRel(0.5, 2, 1)).toBeCloseTo(-0.5, 9);
+  });
+  it("is monotonic non-decreasing in workP", () => {
+    for (const count of [2, 5]) {
+      for (let i = 0; i < count; i++) {
+        let prev = cardRel(0, count, i);
+        for (let s = 1; s <= 100; s++) {
+          const cur = cardRel(s / 100, count, i);
+          expect(cur).toBeGreaterThanOrEqual(prev);
+          prev = cur;
+        }
+      }
+    }
+  });
+  it("count=5: only neighbours of the active slot sit strictly inside (-1, 1)", () => {
+    // workP=0.55 → slot 2.2: card 2 mid-departure, card 3 mid-arrival,
+    // everyone else saturated at ±1 (fully dust, faded out).
+    expect(cardRel(0.55, 5, 0)).toBe(1);
+    expect(cardRel(0.55, 5, 1)).toBe(1);
+    expect(cardRel(0.55, 5, 2)).toBeCloseTo(0.2, 9);
+    expect(cardRel(0.55, 5, 3)).toBeCloseTo(-0.8, 9);
+    expect(cardRel(0.55, 5, 4)).toBe(-1);
+  });
+  it("count=5 settled slots: active card 0, both neighbours at exactly ±1", () => {
+    // workP=0.5 → slot 2 exactly: the settled join of a 5-card ring.
+    expect(cardRel(0.5, 5, 2)).toBe(0);
+    expect(cardRel(0.5, 5, 1)).toBe(1);
+    expect(cardRel(0.5, 5, 3)).toBe(-1);
+  });
+  it("count=1 returns 0 (a lone card stays settled)", () => {
+    for (const workP of [0, 0.25, 0.5, 1]) expect(cardRel(workP, 1, 0)).toBe(0);
+  });
+  it("clamps: workP outside [0,1] saturates and far cards pin to ±1", () => {
+    expect(cardRel(-0.5, 2, 0)).toBe(0); // clamp01(workP) floors at 0
+    expect(cardRel(1.5, 2, 0)).toBe(1); // clamp01(workP) caps at 1
+    expect(cardRel(1, 5, 0)).toBe(1); // slot 4, card 0 → rel 4 → clamped
+    expect(cardRel(0, 5, 4)).toBe(-1); // slot 0, card 4 → rel -4 → clamped
   });
 });
 
@@ -131,25 +160,5 @@ describe("shardScatterAttrs", () => {
     const a = shardScatterAttrs(4, 4, 1);
     const b = shardScatterAttrs(4, 4, 2);
     expect(Array.from(b.offsets)).not.toEqual(Array.from(a.offsets));
-  });
-});
-
-describe("explodeEnvelope", () => {
-  it("is 0 at rest on either side and 1 at the tent peak", () => {
-    expect(explodeEnvelope(-1)).toBe(0);
-    expect(explodeEnvelope(0)).toBe(0);
-    expect(explodeEnvelope(0.5)).toBe(1);
-    expect(explodeEnvelope(1)).toBe(0);
-    expect(explodeEnvelope(2)).toBe(0);
-  });
-  it("is continuous at the joins t=0, 0.5, 1 (1e-4 straddle)", () => {
-    for (const edge of [0, 0.5, 1]) {
-      expect(explodeEnvelope(edge + 1e-4)).toBeCloseTo(explodeEnvelope(edge - 1e-4), 3);
-    }
-  });
-  it("is symmetric: envelope(t) === envelope(1-t) within 1e-9", () => {
-    for (let t = -0.25; t <= 1.25; t += 0.01) {
-      expect(Math.abs(explodeEnvelope(t) - explodeEnvelope(1 - t))).toBeLessThan(1e-9);
-    }
   });
 });
