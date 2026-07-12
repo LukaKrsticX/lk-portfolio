@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { debugFlag, debugTier } from "./debug-flags";
+import { debugChoice, debugFlag, debugTier } from "./debug-flags";
 
 describe("debugFlag", () => {
   it("defaults to enabled", () => {
@@ -37,5 +37,19 @@ describe("debugTier", () => {
     expect(debugTier("?tier=med")).toBe("med");
     expect(debugTier("?tier=ultra")).toBeNull();
     expect(debugTier("")).toBeNull();
+  });
+});
+
+describe("debugChoice", () => {
+  it("absence means control (null)", () => {
+    expect(debugChoice("helixvar", ["a", "b"], "")).toBeNull();
+    expect(debugChoice("helixvar", ["a", "b"], "?other=a")).toBeNull();
+  });
+  it("unlisted value means control (null)", () => {
+    expect(debugChoice("helixvar", ["a", "b"], "?helixvar=z")).toBeNull();
+  });
+  it("picks a listed choice", () => {
+    expect(debugChoice("helixvar", ["a", "b"], "?helixvar=b")).toBe("b");
+    expect(debugChoice("helixvar", ["a", "b"], "?helixvar=a&other=0")).toBe("a");
   });
 });

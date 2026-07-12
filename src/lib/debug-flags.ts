@@ -15,3 +15,13 @@ export function debugTier(searchOverride?: string): Tier | null {
   const t = new URLSearchParams(search(searchOverride)).get("tier");
   return t === "low" || t === "med" || t === "high" ? t : null;
 }
+
+/** `?name=<choice>` picks a staged variant; absence or an unlisted value → null (control). */
+export function debugChoice<T extends string>(
+  name: string,
+  choices: readonly T[],
+  searchOverride?: string,
+): T | null {
+  const v = new URLSearchParams(search(searchOverride)).get(name);
+  return choices.includes(v as T) ? (v as T) : null;
+}
