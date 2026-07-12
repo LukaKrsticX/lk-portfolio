@@ -90,6 +90,7 @@ export function Hero({ tier, onReady }: { tier: Tier; onReady: () => void }) {
     }
     scrollSignals.p = clamp01(y / scrollMetrics.maxScroll);
     scrollSignals.heroP = clamp01(y / scrollMetrics.heroEnd);
+    scrollSignals.workP = clamp01((y - scrollMetrics.workStart) / scrollMetrics.workSpan);
     const vel = (y - prevY.current) / Math.max(dt, 1e-4);
     prevY.current = y;
     energyRef.current = stepEnergy(energyRef.current, Math.min(1, Math.abs(vel) / 1800), dt);

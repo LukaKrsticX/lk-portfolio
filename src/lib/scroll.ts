@@ -4,10 +4,10 @@ import type Lenis from "lenis";
 export const scrollState = { y: 0 };
 
 /** Layout metrics — measured at mount + resize/ResizeObserver ONLY. Floored at 1 (no NaN). */
-export const scrollMetrics = { maxScroll: 1, heroEnd: 1 };
+export const scrollMetrics = { maxScroll: 1, heroEnd: 1, workStart: 1, workSpan: 1 };
 
 /** Per-frame derived signals, written once per frame by Hero's useFrame, read by gl siblings. */
-export const scrollSignals = { p: 0, heroP: 0, energy: 0 };
+export const scrollSignals = { p: 0, heroP: 0, workP: 0, energy: 0 };
 
 /** Bridge: SmoothScroll (DOM side) owns the instance; RafBridge (GL side) feeds raf. */
 export const lenisRef: { current: Lenis | null } = { current: null };
@@ -27,6 +27,15 @@ export function measureScrollMetrics(): void {
   scrollMetrics.maxScroll = Math.max(1, (doc?.scrollHeight ?? 0) - window.innerHeight);
   const hero = document.getElementById("hero");
   scrollMetrics.heroEnd = Math.max(1, hero ? hero.offsetTop + hero.offsetHeight : 0);
+  // #work scroll window: start 0.6vh before the section, span padded by 0.2vh.
+  // Reset to 1 on every measure so a removed element never leaves stale values.
+  scrollMetrics.workStart = 1;
+  scrollMetrics.workSpan = 1;
+  const work = document.getElementById("work");
+  if (work) {
+    scrollMetrics.workStart = Math.max(1, work.offsetTop - 0.6 * window.innerHeight);
+    scrollMetrics.workSpan = Math.max(1, work.offsetHeight + 0.2 * window.innerHeight);
+  }
 }
 
 // --- scene-live store: set from inside the Canvas, consumed by SmoothScroll ---

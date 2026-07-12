@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clamp01, easeInOutSine, smoothstep01, stepEnergy,
-  scrollState, scrollMetrics, measureScrollMetrics,
+  scrollState, scrollMetrics, scrollSignals, measureScrollMetrics,
   getSceneLive, setSceneLive, subscribeSceneLive,
 } from "./scroll";
 
@@ -44,6 +44,8 @@ describe("measureScrollMetrics", () => {
   beforeEach(() => {
     scrollMetrics.maxScroll = 1;
     scrollMetrics.heroEnd = 1;
+    scrollMetrics.workStart = 1;
+    scrollMetrics.workSpan = 1;
   });
   it("floors both metrics at 1 when the document is short/unmeasurable", () => {
     measureScrollMetrics(); // jsdom: zero-height layout, scrollingElement undefined
@@ -68,6 +70,74 @@ describe("measureScrollMetrics", () => {
     expect(scrollMetrics.maxScroll).toBe(4000);
     expect(scrollMetrics.heroEnd).toBe(900);
     hero.remove();
+  });
+  it("computes workStart/workSpan from #work per the 0.6/0.2-viewport formula", () => {
+    Object.defineProperty(window, "innerHeight", { value: 1000, configurable: true });
+    const work = document.createElement("section");
+    work.id = "work";
+    document.body.appendChild(work);
+    Object.defineProperty(work, "offsetTop", { value: 2000, configurable: true });
+    Object.defineProperty(work, "offsetHeight", { value: 3000, configurable: true });
+    measureScrollMetrics();
+    expect(scrollMetrics.workStart).toBe(1400); // 2000 - 0.6 * 1000
+    expect(scrollMetrics.workSpan).toBe(3200); // 3000 + 0.2 * 1000
+    work.remove();
+  });
+  it("floors workStart/workSpan at 1 when #work sits above the trigger window", () => {
+    Object.defineProperty(window, "innerHeight", { value: 1000, configurable: true });
+    const work = document.createElement("section");
+    work.id = "work";
+    document.body.appendChild(work);
+    Object.defineProperty(work, "offsetTop", { value: 100, configurable: true }); // 100 - 600 < 1
+    Object.defineProperty(work, "offsetHeight", { value: 0, configurable: true });
+    measureScrollMetrics();
+    expect(scrollMetrics.workStart).toBe(1);
+    expect(scrollMetrics.workSpan).toBe(200); // 0 + 0.2 * 1000
+    work.remove();
+  });
+  it("keeps workStart/workSpan at 1 when #work is missing", () => {
+    scrollMetrics.workStart = 777; // pre-dirty: measure must overwrite, not skip
+    scrollMetrics.workSpan = 888;
+    measureScrollMetrics();
+    expect(scrollMetrics.workStart).toBe(1);
+    expect(scrollMetrics.workSpan).toBe(1);
+  });
+  it("resets workStart/workSpan to 1 on re-measure after #work is removed (no stale values)", () => {
+    Object.defineProperty(window, "innerHeight", { value: 1000, configurable: true });
+    const work = document.createElement("section");
+    work.id = "work";
+    document.body.appendChild(work);
+    Object.defineProperty(work, "offsetTop", { value: 2000, configurable: true });
+    Object.defineProperty(work, "offsetHeight", { value: 3000, configurable: true });
+    measureScrollMetrics();
+    expect(scrollMetrics.workStart).toBe(1400);
+    work.remove();
+    measureScrollMetrics();
+    expect(scrollMetrics.workStart).toBe(1);
+    expect(scrollMetrics.workSpan).toBe(1);
+  });
+});
+
+describe("workP derivation", () => {
+  // Hero's useFrame assigns scrollSignals.workP = clamp01((y - workStart) / workSpan)
+  // once per frame. Pure-math assert on the same expression — Hero is not mounted here.
+  const workStart = 1400;
+  const workSpan = 3200;
+  const workP = (y: number): number => clamp01((y - workStart) / workSpan);
+  it("starts at 0 (module initial value)", () => {
+    expect(scrollSignals.workP).toBe(0);
+  });
+  it("is 0 at and before the window start", () => {
+    expect(workP(0)).toBe(0);
+    expect(workP(1000)).toBe(0);
+    expect(workP(1400)).toBe(0);
+  });
+  it("ramps linearly inside the window", () => {
+    expect(workP(1400 + 1600)).toBeCloseTo(0.5);
+  });
+  it("is 1 at and past the window end", () => {
+    expect(workP(1400 + 3200)).toBe(1);
+    expect(workP(999999)).toBe(1);
   });
 });
 
