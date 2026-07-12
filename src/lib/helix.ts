@@ -1,33 +1,20 @@
 import { clamp01, smoothstep01 } from "./scroll";
 
-/** Staged tilt A/B for the operator (2026-07-12 night) — null = shipped control. */
-export type HelixTiltVariant = "a" | "b" | null;
-
-/** Rest tilt of the drift group. helixTiltAt() holds exactly this value until a
- * variant's first window opens, so the JSX rest pose stays continuous. */
+/** Rest tilt of the drift group. helixTiltAt() holds exactly this value until
+ * the contact window opens, so the JSX rest pose stays continuous. */
 export const HELIX_TILT_REST = -0.42;
 
-// Windows MUST stay in sync with HelixRibbon: DRIFT mirrors the position-drift
-// envelope ((p - 0.22) / 0.5); CONTACT is the approved landing window.
-const DRIFT = { start: 0.22, span: 0.5 };
+// Window MUST stay in sync with HelixRibbon: CONTACT is the #contact landing window.
 const CONTACT = { start: 0.85, span: 0.15 };
 
 /**
- * rotation.z envelope for the drifting helix group, by staged variant:
- * - control (null): rights itself to -0.05 in the contact window (f6b94d7) —
- *   operator read this as a horizontal wave once the ribbon is center stage.
- * - "a": contact landing goes near-vertical (-1.25) instead of flat.
- * - "b": verticalizes with the center-drift (-1.05 by p 0.72, ≈-45° at p 0.5),
- *   holds, then the contact window completes to -1.35.
+ * rotation.z envelope for the drifting helix group: holds the rest tilt, then
+ * the #contact landing window takes the ribbon near-vertical (-1.25). A/B
+ * winner over a flat -0.05 control that read as a horizontal wave center stage.
  */
-export function helixTiltAt(p: number, variant: HelixTiltVariant): number {
+export function helixTiltAt(p: number): number {
   const contact = smoothstep01(clamp01((p - CONTACT.start) / CONTACT.span));
-  if (variant === "a") return HELIX_TILT_REST - 0.83 * contact;
-  if (variant === "b") {
-    const drift = smoothstep01(clamp01((p - DRIFT.start) / DRIFT.span));
-    return HELIX_TILT_REST - 0.63 * drift - 0.3 * contact;
-  }
-  return HELIX_TILT_REST + 0.37 * contact;
+  return HELIX_TILT_REST - 0.83 * contact;
 }
 
 /**

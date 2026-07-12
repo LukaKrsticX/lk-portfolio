@@ -49,33 +49,14 @@ describe("twistPlanePositions", () => {
 });
 
 describe("helixTiltAt", () => {
-  it("every variant holds the JSX rest tilt until its first window opens", () => {
-    for (const v of [null, "a", "b"] as const) {
-      expect(helixTiltAt(0, v)).toBeCloseTo(HELIX_TILT_REST);
-    }
-    // control and a only move in the contact window
-    expect(helixTiltAt(0.85, null)).toBeCloseTo(HELIX_TILT_REST);
-    expect(helixTiltAt(0.85, "a")).toBeCloseTo(HELIX_TILT_REST);
-    // b holds rest until the center-drift window opens at 0.22
-    expect(helixTiltAt(0.22, "b")).toBeCloseTo(HELIX_TILT_REST);
+  it("holds the JSX rest tilt until the contact window opens", () => {
+    expect(helixTiltAt(0)).toBeCloseTo(HELIX_TILT_REST);
+    expect(helixTiltAt(0.85)).toBeCloseTo(HELIX_TILT_REST);
   });
-  it("control lands flat at -0.05 (shipped f6b94d7 behavior)", () => {
-    expect(helixTiltAt(1, null)).toBeCloseTo(-0.05);
+  it("lands near-vertical at -1.25 at full scroll", () => {
+    expect(helixTiltAt(1)).toBeCloseTo(-1.25);
   });
-  it("variant a lands near-vertical at -1.25", () => {
-    expect(helixTiltAt(1, "a")).toBeCloseTo(-1.25);
-  });
-  it("variant b verticalizes across the drift window, holds, then completes to -1.35", () => {
-    expect(helixTiltAt(0.5, "b")).toBeLessThan(-0.6); // already diagonal at center stage
-    expect(helixTiltAt(0.72, "b")).toBeCloseTo(-1.05);
-    expect(helixTiltAt(0.8, "b")).toBeCloseTo(-1.05); // hold between windows
-    expect(helixTiltAt(1, "b")).toBeCloseTo(-1.35);
-  });
-  it("is continuous at every window join (no pop)", () => {
-    for (const v of [null, "a", "b"] as const) {
-      for (const edge of [0.22, 0.72, 0.85]) {
-        expect(helixTiltAt(edge + 1e-4, v)).toBeCloseTo(helixTiltAt(edge - 1e-4, v), 3);
-      }
-    }
+  it("is continuous at the contact-window join (no pop)", () => {
+    expect(helixTiltAt(0.85 + 1e-4)).toBeCloseTo(helixTiltAt(0.85 - 1e-4), 3);
   });
 });

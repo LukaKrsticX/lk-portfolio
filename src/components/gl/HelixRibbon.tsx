@@ -2,7 +2,6 @@
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { Group, Material, PlaneGeometry } from "three";
-import { debugChoice } from "@/lib/debug-flags";
 import { HELIX_TILT_REST, helixTiltAt, twistPlanePositions } from "@/lib/helix";
 import { clamp01, scrollSignals, smoothstep01 } from "@/lib/scroll";
 
@@ -30,8 +29,6 @@ export function HelixRibbon({ material, choreo }: { material: Material; choreo: 
   const drift = useRef<Group>(null);
   const group = useRef<Group>(null);
   const spinAcc = useRef(0);
-  // Tilt A/B staged for the morning review (?helixvar=a|b) — constant per mount.
-  const tiltVariant = useMemo(() => debugChoice("helixvar", ["a", "b"] as const), []);
   const strandA = useMemo(() => buildStrip(0), []);
   const strandB = useMemo(() => buildStrip(Math.PI), []);
   useEffect(
@@ -54,12 +51,11 @@ export function HelixRibbon({ material, choreo }: { material: Material; choreo: 
       // (heroP hits 1 around p≈0.2), so the two are never mid-transition together.
       drift.current.position.x =
         DRIFT_REST_X - (DRIFT_REST_X - DRIFT_TARGET_X) * smoothstep01(clamp01((scrollSignals.p - 0.22) / 0.5));
-      // #contact landing gesture, A/B-staged (2026-07-12 night): control rights
-      // the ribbon to -0.05 — operator read that as a horizontal wave at center
-      // stage; ?helixvar=a|b land near-vertical instead. Single runtime writer
-      // of rotation.z; every variant holds exactly HELIX_TILT_REST until its
-      // first window opens (continuous with the JSX rest pose).
-      drift.current.rotation.z = helixTiltAt(scrollSignals.p, tiltVariant);
+      // #contact landing gesture: the contact window takes the ribbon
+      // near-vertical. Single runtime writer of rotation.z; holds exactly
+      // HELIX_TILT_REST until the contact window opens (continuous with the
+      // JSX rest pose).
+      drift.current.rotation.z = helixTiltAt(scrollSignals.p);
       // Portal yield — window MUST stay in sync with the CasePortals scroll
       // window, owned by scroll.ts workStart/workSpan (workP is its signal).
       // Tent envelope: recede to -1.3 mid-/03-window so the portals own the
