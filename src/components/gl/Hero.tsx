@@ -5,6 +5,7 @@ import { Color, DoubleSide, Group, MeshPhysicalMaterial } from "three";
 import { debugFlag } from "@/lib/debug-flags";
 import type { Tier } from "@/lib/quality";
 import { clamp01, easeInOutSine, scrollMetrics, scrollSignals, scrollState, stepEnergy } from "@/lib/scroll";
+import { CasePortals } from "./CasePortals";
 import { buildEnvironmentTexture } from "./env-texture";
 import { HelixRibbon } from "./HelixRibbon";
 import { Monogram } from "./Monogram";
@@ -28,6 +29,7 @@ export function Hero({ tier, onReady }: { tier: Tier; onReady: () => void }) {
   const rippleOn = useMemo(() => debugFlag("ripple"), []);
   const iridOn = useMemo(() => debugFlag("irid"), []);
   const choreoOn = useMemo(() => debugFlag("choreo"), []);
+  const portalsOn = useMemo(() => debugFlag("portals"), []);
 
   const pointer = usePointerTracker();
   const trail = usePointerRipple(pointer, rippleOn);
@@ -125,6 +127,8 @@ export function Hero({ tier, onReady }: { tier: Tier; onReady: () => void }) {
   return (
     <>
       <RippleBackground trail={trail} />
+      {/* Sibling of scrollGroup ON PURPOSE: portals must not inherit the recede-dolly/sway. */}
+      {portalsOn && <CasePortals tier={tier} />}
       <group ref={scrollGroup}>
         <group ref={group} scale={tier === "low" ? 0.9 : 1}>
           <group ref={monogramGroup} scale={1.2}>

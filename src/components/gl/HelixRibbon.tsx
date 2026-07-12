@@ -60,6 +60,11 @@ export function HelixRibbon({ material, choreo }: { material: Material; choreo: 
       // of rotation.z; every variant holds exactly HELIX_TILT_REST until its
       // first window opens (continuous with the JSX rest pose).
       drift.current.rotation.z = helixTiltAt(scrollSignals.p, tiltVariant);
+      // Portal yield — window MUST stay in sync with the CasePortals scroll
+      // window, owned by scroll.ts workStart/workSpan (workP is its signal).
+      // Tent envelope: recede to -1.3 mid-/03-window so the portals own the
+      // foreground, back to -0.7 at both edges — continuous with the JSX rest z.
+      drift.current.position.z = -0.7 - 0.6 * smoothstep01(clamp01(1 - Math.abs(2 * scrollSignals.workP - 1)));
     }
   });
 
