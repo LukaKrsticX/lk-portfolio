@@ -42,14 +42,14 @@ describe("debugTier", () => {
 
 describe("debugChoice", () => {
   it("absence means control (null)", () => {
-    expect(debugChoice("helixvar", ["a", "b"], "")).toBeNull();
-    expect(debugChoice("helixvar", ["a", "b"], "?other=a")).toBeNull();
+    expect(debugChoice("variant", ["a", "b"], "")).toBeNull();
+    expect(debugChoice("variant", ["a", "b"], "?other=a")).toBeNull();
   });
   it("unlisted value means control (null)", () => {
-    expect(debugChoice("helixvar", ["a", "b"], "?helixvar=z")).toBeNull();
+    expect(debugChoice("variant", ["a", "b"], "?variant=z")).toBeNull();
   });
   it("picks a listed choice", () => {
-    expect(debugChoice("helixvar", ["a", "b"], "?helixvar=b")).toBe("b");
-    expect(debugChoice("helixvar", ["a", "b"], "?helixvar=a&other=0")).toBe("a");
+    expect(debugChoice("variant", ["a", "b"], "?variant=b")).toBe("b");
+    expect(debugChoice("variant", ["a", "b"], "?variant=a&other=0")).toBe("a");
   });
 });

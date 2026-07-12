@@ -128,10 +128,11 @@ void main() {
   // period, so neighbouring rows tumble in related directions and the
   // sliced-column skeleton survives the rotation; the smaller aRand jitter
   // keeps rows from reading robotically rigid. 1.1 rad row span (+0.35
-  // jitter ≈ 73° max) keeps almost every slat short of the 90° flip — at
+  // jitter ≈ 73° max) keeps every slat short of a 90° flip on its own — at
   // 1.7 rad half the debris showed its dark back mid-transition and the
-  // whole mid-state went near-black; the fragment back-face slate still
-  // covers the few that pass 90°.
+  // whole mid-state went near-black. Backfaces still occur where tumble
+  // composes with the ring yaw (mesh.rotation.y); the fragment slate
+  // covers those.
   float tumble = prog * (1.1 * sin(aGrid.y * 0.9 + 0.6) + 0.35 * (aRand - 0.5)) * gate2;
   float st = sin(tumble);
   float ct = cos(tumble);

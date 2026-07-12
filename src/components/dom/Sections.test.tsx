@@ -22,7 +22,9 @@ describe("DOM layer", () => {
   });
   it("renders the agencies extended copy (stack, turnaround, handoff)", () => {
     render(<Sections />);
+    expect(screen.getByText(/Webflow, Next\.js\/React/)).toBeInTheDocument();
     expect(screen.getByText(/Fixed quote/)).toBeInTheDocument();
+    expect(screen.getByText(/runbook/)).toBeInTheDocument();
   });
   it("nav is a real <nav> with hash links that resolve to rendered sections", () => {
     render(<Nav />);
