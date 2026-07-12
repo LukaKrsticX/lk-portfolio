@@ -29,6 +29,11 @@ describe("content module", () => {
     const slugs = site.cases.map((c) => c.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
   });
+  it("agencies block is complete (every field carries real copy)", () => {
+    for (const v of Object.values(site.agencies)) {
+      expect(v.length).toBeGreaterThan(10);
+    }
+  });
   it("bans agency buzzwords everywhere", () => {
     const text = JSON.stringify(site).toLowerCase();
     for (const w of ["leverage", "seamless", "unlock", "empower", "passionate"]) {

@@ -25,6 +25,9 @@ export interface SiteContent {
     readonly cadence: string;
     readonly capacity: string;
     readonly mapping: string;
+    readonly stack: string;
+    readonly turnaround: string;
+    readonly handoff: string;
   };
   readonly cases: readonly CaseStudy[];
   readonly about: string;

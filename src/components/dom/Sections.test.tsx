@@ -20,6 +20,10 @@ describe("DOM layer", () => {
       expect(screen.getByRole("link", { name: new RegExp(escapeRegExp(c.title), "i") })).toHaveAttribute("href", c.url);
     }
   });
+  it("renders the agencies extended copy (stack, turnaround, handoff)", () => {
+    render(<Sections />);
+    expect(screen.getByText(/Fixed quote/)).toBeInTheDocument();
+  });
   it("nav is a real <nav> with hash links that resolve to rendered sections", () => {
     render(<Nav />);
     render(<Sections />);

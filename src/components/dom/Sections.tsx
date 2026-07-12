@@ -24,6 +24,9 @@ export function Sections() {
           <p style={{ color: "var(--text-dim)" }}>
             {site.agencies.whiteLabel} {site.agencies.timezone} {site.agencies.cadence} {site.agencies.capacity}
           </p>
+          <p style={{ color: "var(--text-dim)", marginTop: 8 }}>
+            {site.agencies.stack} {site.agencies.turnaround} {site.agencies.handoff}
+          </p>
         </div>
       </section>
 

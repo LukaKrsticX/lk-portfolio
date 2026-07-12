@@ -33,6 +33,9 @@ export const site = {
     cadence: "Reply within one business day. No disappearing acts.",
     capacity: "Solo, deliberately. One or two agency engagements at a time.",
     mapping: "This site was built solo, end to end — the same discipline goes into your client work.",
+    stack: "Webflow, Next.js/React, WordPress rescue, integrations (forms, CRM, analytics).",
+    turnaround: "Typical: rescue 1–2 weeks, full build 3–6 weeks. Fixed quote before work starts.",
+    handoff: "Handoff includes a runbook, credentials transfer and 30 days of post-launch fixes.",
   },
   cases: [
     {
