@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ContactForm } from "@/components/dom/ContactForm";
 import { site } from "@/content/site";
 
 export function Sections() {
@@ -68,7 +69,8 @@ export function Sections() {
 
       <section id="contact" tabIndex={-1}>
         <h2>Contact</h2>
-        <p>
+        <ContactForm />
+        <p style={{ marginTop: "1.5rem" }}>
           <a href={`mailto:${site.contact.email}`}>{site.contact.email}</a>
         </p>
         <p className="mono" style={{ marginTop: 8 }}>{site.contact.privacyNote}</p>
