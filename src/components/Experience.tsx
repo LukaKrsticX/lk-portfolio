@@ -2,6 +2,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { Loader } from "@/components/Loader";
+import { capture } from "@/lib/analytics";
 import { SceneBoundary } from "@/components/gl/SceneBoundary";
 import { debugTier } from "@/lib/debug-flags";
 import { supportsWebGL } from "@/lib/gl-support";
@@ -23,16 +24,27 @@ export function Experience() {
   const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
 
   useEffect(() => {
-    if (!supportsWebGL()) return;
+    if (!supportsWebGL()) {
+      capture("webgl_fallback_triggered", { cause: "no-webgl" });
+      return;
+    }
     const override = debugTier();
     if (override !== null) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot debug override
       setTier(override);
+      capture("quality_tier_selected", { tier: override, cause: "initial" });
       return;
     }
     detectTier()
-      .then((t) => setTier(clampTier(t, readTierCap())))
-      .catch(() => setTier("low"));
+      .then((t) => {
+        const settled = clampTier(t, readTierCap());
+        setTier(settled);
+        capture("quality_tier_selected", { tier: settled, cause: "initial" });
+      })
+      .catch(() => {
+        setTier("low");
+        capture("quality_tier_selected", { tier: "low", cause: "initial" });
+      });
   }, []);
 
   // Demote one step and persist (7-day cap) — never promote at runtime.
@@ -41,6 +53,7 @@ export function Experience() {
       if (t === null || t === "low") return t;
       const demoted = demoteTier(t);
       if (debugTier() === null) persistTierCap(demoted);
+      capture("quality_tier_selected", { tier: demoted, cause: "demote" });
       return demoted;
     });
   }, []);
