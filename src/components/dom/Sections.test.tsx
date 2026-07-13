@@ -26,6 +26,13 @@ describe("DOM layer", () => {
     expect(screen.getByText(/Fixed quote/)).toBeInTheDocument();
     expect(screen.getByText(/runbook/)).toBeInTheDocument();
   });
+  it("agencies card links to the /agencies one-pager", () => {
+    render(<Sections />);
+    expect(screen.getByRole("link", { name: /one-pager for agencies/i })).toHaveAttribute(
+      "href",
+      "/agencies",
+    );
+  });
   it("nav is a real <nav> with hash links that resolve to rendered sections", () => {
     render(<Nav />);
     render(<Sections />);

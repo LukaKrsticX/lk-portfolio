@@ -6,6 +6,11 @@ export const site = {
     description:
       "I build, rescue and stand behind websites in the AI era. Webflow and code, from Belgrade, working with US/UK agencies.",
   },
+  agenciesMeta: {
+    title: "Luka Krstić — for agencies",
+    description:
+      "White-label web development from Belgrade. Webflow, Next.js/React, WordPress rescue — same-day overlap with UK and US-East.",
+  },
   positioning: "I build, rescue and stand behind websites in the AI era.",
   services: [
     {
@@ -70,6 +75,17 @@ export const site = {
   ],
   about:
     "Luka Krstić. IT masters student and working developer in Belgrade. I ship with modern AI tooling and take responsibility for what it produces.",
+  form: {
+    nameLabel: "Name",
+    emailLabel: "Email",
+    messageLabel: "Message",
+    submitLabel: "Send",
+    sending: "Sending…",
+    success: "Sent. I reply within one business day.",
+    failure: "Couldn't send — email me directly:",
+    required: "Required.",
+    invalidEmail: "Enter a valid email.",
+  },
   contact: {
     email: "lukakrstic2002@gmail.com",
     privacyNote: "Your name and email are used only to reply. No lists, no marketing.",

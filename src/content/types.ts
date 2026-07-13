@@ -15,8 +15,21 @@ export interface Service {
   readonly blurb: string;
 }
 
+export interface FormCopy {
+  readonly nameLabel: string;
+  readonly emailLabel: string;
+  readonly messageLabel: string;
+  readonly submitLabel: string;
+  readonly sending: string;
+  readonly success: string;
+  readonly failure: string;
+  readonly required: string;
+  readonly invalidEmail: string;
+}
+
 export interface SiteContent {
   readonly meta: { readonly title: string; readonly description: string };
+  readonly agenciesMeta: { readonly title: string; readonly description: string };
   readonly positioning: string;
   readonly services: readonly Service[];
   readonly agencies: {
@@ -31,5 +44,6 @@ export interface SiteContent {
   };
   readonly cases: readonly CaseStudy[];
   readonly about: string;
-  readonly contact: { readonly email: string; readonly privacyNote: string };
+  readonly form: FormCopy;
+  readonly contact: { readonly email: string; readonly privacyNote: string; readonly bookingUrl?: string };
 }

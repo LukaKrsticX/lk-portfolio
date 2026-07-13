@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { site } from "@/content/site";
 
 export function Sections() {
@@ -26,6 +27,9 @@ export function Sections() {
           </p>
           <p style={{ color: "var(--text-dim)", marginTop: 8 }}>
             {site.agencies.stack} {site.agencies.turnaround} {site.agencies.handoff}
+          </p>
+          <p className="mono" style={{ marginTop: 8 }}>
+            <Link href="/agencies">One-pager for agencies →</Link>
           </p>
         </div>
       </section>

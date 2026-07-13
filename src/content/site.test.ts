@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { site } from "./site";
+import type { SiteContent } from "./types";
 
 describe("content module", () => {
   it("has meta, positioning and contact email", () => {
@@ -33,6 +34,17 @@ describe("content module", () => {
     for (const v of Object.values(site.agencies)) {
       expect(v.length).toBeGreaterThan(10);
     }
+  });
+  it("agencies one-pager meta + form copy present", () => {
+    expect(site.agenciesMeta.title.toLowerCase()).toContain("agencies");
+    expect(site.agenciesMeta.description.length).toBeGreaterThan(20);
+    for (const v of Object.values(site.form)) {
+      expect(v.length).toBeGreaterThan(0);
+    }
+  });
+  it("booking link ships absent until the Cal.com decision", () => {
+    const c: SiteContent = site;
+    expect(c.contact.bookingUrl).toBeUndefined();
   });
   it("bans agency buzzwords everywhere", () => {
     const text = JSON.stringify(site).toLowerCase();
