@@ -47,21 +47,18 @@ export function Experience() {
       });
   }, []);
 
-  // Demote one step and persist (7-day cap) — never promote at runtime.
+  // Demote one step — never promote at runtime.
   const handleDemote = useCallback(() => {
-    setTier((t) => {
-      if (t === null || t === "low") return t;
-      const demoted = demoteTier(t);
-      if (debugTier() === null) persistTierCap(demoted);
-      return demoted;
-    });
+    setTier((t) => (t === null || t === "low" ? t : demoteTier(t)));
   }, []);
 
-  // Demote analytics fire on the committed state change, not inside the updater
-  // (updaters must stay pure; StrictMode double-invokes them).
+  // Demote persistence (7-day cap) + analytics fire on the committed state
+  // change, not inside the updater (updaters must stay pure; StrictMode
+  // double-invokes them).
   const prevTier = useRef<Tier | null>(null);
   useEffect(() => {
     if (tier !== null && prevTier.current !== null && tier !== prevTier.current) {
+      if (debugTier() === null) persistTierCap(tier);
       capture("quality_tier_selected", { tier, cause: "demote" });
     }
     prevTier.current = tier;

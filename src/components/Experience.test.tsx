@@ -1,4 +1,5 @@
-import { render, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { StrictMode, useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const captureMock = vi.fn();
@@ -12,6 +13,18 @@ vi.mock("@/lib/quality", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/quality")>();
   return { ...actual, detectTier: () => detectTierMock(), readTierCap: () => null };
 });
+
+vi.mock("@/components/Loader", () => ({
+  Loader: ({ onDone }: { onDone: () => void }) => {
+    useEffect(() => onDone(), [onDone]);
+    return null;
+  },
+}));
+vi.mock("@/components/gl/Scene", () => ({
+  default: ({ onDemote }: { onDemote: () => void }) => (
+    <button data-testid="demote" onClick={onDemote} />
+  ),
+}));
 
 import { Experience } from "./Experience";
 
@@ -52,5 +65,26 @@ describe("Experience analytics wiring", () => {
         cause: "no-webgl",
       }),
     );
+  });
+
+  it("demote persists the tier cap on commit, exactly once under StrictMode", async () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+    render(
+      <StrictMode>
+        <Experience />
+      </StrictMode>,
+    );
+    fireEvent.click(await screen.findByTestId("demote"));
+    await waitFor(() =>
+      expect(captureMock).toHaveBeenCalledWith("quality_tier_selected", {
+        tier: "low",
+        cause: "demote",
+      }),
+    );
+    const capWrites = setItemSpy.mock.calls.filter(([key]) => key === "lk-tier-cap");
+    expect(capWrites).toHaveLength(1);
+    expect(JSON.parse(capWrites[0][1] as string)).toMatchObject({ tier: "low" });
+    setItemSpy.mockRestore();
+    localStorage.removeItem("lk-tier-cap");
   });
 });

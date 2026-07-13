@@ -146,6 +146,13 @@ describe("ContactForm", () => {
     fillValidForm();
     submit();
     expect(await screen.findByRole("button", { name: site.form.sending })).toBeDisabled();
+    // A mid-flight edit must NOT re-arm the form (only 'sent' re-arms) —
+    // kills the unconditional setStatus("idle") mutant.
+    fireEvent.change(screen.getByLabelText(site.form.messageLabel), {
+      target: { value: "Edited while the request is in flight." },
+    });
+    expect(screen.getByRole("button", { name: site.form.sending })).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent(site.form.sending);
     release(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(site.form.success));
   });
@@ -163,5 +170,39 @@ describe("ContactForm", () => {
     render(<ContactForm />);
     expect(screen.getByRole("status")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("");
+  });
+
+  it("keeps the failure state and mailto fallback while the user edits to retry", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("offline"));
+    render(<ContactForm />);
+    fillValidForm();
+    submit();
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(site.form.failure));
+    fireEvent.change(screen.getByLabelText(site.form.messageLabel), {
+      target: { value: "Editing my message before retrying the send." },
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(site.form.failure);
+    expect(screen.getByRole("link", { name: site.contact.email })).toBeInTheDocument();
+  });
+
+  it("blocks duplicate sends: button stays disabled after success until a field is edited", async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })),
+    );
+    render(<ContactForm />);
+    fillValidForm();
+    submit();
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(site.form.success));
+    const button = screen.getByRole("button", { name: site.form.submitLabel });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    fireEvent.change(screen.getByLabelText(site.form.messageLabel), {
+      target: { value: "Actually, one more detail about the project." },
+    });
+    expect(button).toBeEnabled();
+    expect(screen.getByRole("status")).not.toHaveTextContent(site.form.success);
+    submit();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
 });

@@ -219,6 +219,29 @@ describe("rate limiting (3/10min per IP → 30/hr → 40/day global)", () => {
     const survivorFourth = await POST(makeReq(validBody(), { ip: "10.0.1.200" }));
     expect(survivorFourth.status).toBe(429);
     expect(Number(survivorFourth.headers.get("Retry-After"))).toBeLessThanOrEqual(600);
+    // Fresh-count proof (kills evict-newest): the evicted IP's re-tracked window
+    // starts at count 1, so it gets two MORE passing requests (global 429s,
+    // >600s) before its per-IP window trips (<=600s). A retained count-1 entry
+    // would trip one request earlier.
+    const evictedR2 = await POST(makeReq(validBody(), { ip: "10.0.0.0" }));
+    expect(evictedR2.status).toBe(429);
+    expect(Number(evictedR2.headers.get("Retry-After"))).toBeGreaterThan(600);
+    const evictedR3 = await POST(makeReq(validBody(), { ip: "10.0.0.0" }));
+    expect(evictedR3.status).toBe(429);
+    expect(Number(evictedR3.headers.get("Retry-After"))).toBeGreaterThan(600);
+    const evictedR4 = await POST(makeReq(validBody(), { ip: "10.0.0.0" }));
+    expect(evictedR4.status).toBe(429);
+    expect(Number(evictedR4.headers.get("Retry-After"))).toBeLessThanOrEqual(600);
+
+    // Newest-retention proof: the LAST pre-cap insert (10.0.1.249) kept its
+    // count 1 — trips per-IP on its third request. Evict-newest would have
+    // dropped it, making the third request a global 429 (>600s) instead.
+    await POST(makeReq(validBody(), { ip: "10.0.1.249" }));
+    await POST(makeReq(validBody(), { ip: "10.0.1.249" }));
+    const newestThird = await POST(makeReq(validBody(), { ip: "10.0.1.249" }));
+    expect(newestThird.status).toBe(429);
+    expect(Number(newestThird.headers.get("Retry-After"))).toBeLessThanOrEqual(600);
+    expect(limiterSizeForTests()).toBe(500);
   });
 
   it("missing x-real-ip falls back to a shared local key without throwing", async () => {

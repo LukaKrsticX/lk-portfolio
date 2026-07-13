@@ -85,9 +85,18 @@ export function ContactForm() {
   }
 
   const sending = status === "sending";
+  const sent = status === "sent";
 
   return (
-    <form onSubmit={handleSubmit} method="post" action="/api/contact" noValidate style={{ maxWidth: 480 }}>
+    <form
+      onSubmit={handleSubmit}
+      // Any edit after a successful send re-arms the form (duplicate-send guard).
+      onChange={() => setStatus((s) => (s === "sent" ? "idle" : s))}
+      method="post"
+      action="/api/contact"
+      noValidate
+      style={{ maxWidth: 480 }}
+    >
       <div style={{ marginTop: "1rem" }}>
         <label className="mono" htmlFor="cf-name" style={{ display: "block", marginBottom: 4 }}>
           {site.form.nameLabel}
@@ -158,12 +167,13 @@ export function ContactForm() {
 
       <button
         type="submit"
-        disabled={sending}
+        disabled={sending || sent}
         className="mono"
         style={{
           ...fieldStyle,
           width: "auto",
-          cursor: sending ? "wait" : "pointer",
+          cursor: sending ? "wait" : sent ? "default" : "pointer",
+          opacity: sending || sent ? 0.55 : 1,
           marginTop: "1.5rem",
           padding: "10px 24px",
         }}
