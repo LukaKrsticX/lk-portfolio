@@ -85,6 +85,7 @@ export const site = {
     failure: "Couldn't send — email me directly:",
     required: "Required.",
     invalidEmail: "Enter a valid email.",
+    messageMin: "Say a bit more — 10 characters minimum.",
   },
   contact: {
     email: "lukakrstic2002@gmail.com",

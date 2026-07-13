@@ -44,6 +44,7 @@ export function ContactForm() {
     if (!email) nextErrors.email = site.form.required;
     else if (!EMAIL_RE.test(email)) nextErrors.email = site.form.invalidEmail;
     if (!message) nextErrors.message = site.form.required;
+    else if (message.length < 10) nextErrors.message = site.form.messageMin;
     setErrors(nextErrors);
     if (nextErrors.name) return nameRef.current?.focus();
     if (nextErrors.email) return emailRef.current?.focus();
@@ -68,7 +69,14 @@ export function ContactForm() {
         return;
       }
       setStatus("failed");
-      const stage = res.status === 503 ? "unconfigured" : res.status === 429 ? "rate-limit" : "send";
+      const stage =
+        res.status === 503
+          ? "unconfigured"
+          : res.status === 429
+            ? "rate-limit"
+            : res.status === 400
+              ? "validation"
+              : "send";
       capture("form_submit_fail", { stage });
     } catch {
       setStatus("failed");
@@ -79,7 +87,7 @@ export function ContactForm() {
   const sending = status === "sending";
 
   return (
-    <form onSubmit={handleSubmit} noValidate style={{ maxWidth: 480 }}>
+    <form onSubmit={handleSubmit} method="post" action="/api/contact" noValidate style={{ maxWidth: 480 }}>
       <div style={{ marginTop: "1rem" }}>
         <label className="mono" htmlFor="cf-name" style={{ display: "block", marginBottom: 4 }}>
           {site.form.nameLabel}
@@ -164,7 +172,13 @@ export function ContactForm() {
       </button>
 
       <p role="status" className="mono" style={{ marginTop: 8, minHeight: "1.2em" }}>
-        {status === "sent" ? site.form.success : status === "failed" ? site.form.failure : ""}
+        {status === "sent"
+          ? site.form.success
+          : status === "failed"
+            ? site.form.failure
+            : status === "sending"
+              ? site.form.sending
+              : ""}
       </p>
       {status === "failed" && (
         <p style={{ marginTop: 4 }}>

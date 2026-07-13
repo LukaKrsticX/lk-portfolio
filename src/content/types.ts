@@ -25,6 +25,7 @@ export interface FormCopy {
   readonly failure: string;
   readonly required: string;
   readonly invalidEmail: string;
+  readonly messageMin: string;
 }
 
 export interface SiteContent {

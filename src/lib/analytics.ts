@@ -18,7 +18,10 @@ export function capture(event: AnalyticsEvent, props: Record<string, unknown> = 
   // Env read at CALL time (vi.stubEnv compat); Next inlines NEXT_PUBLIC_ either way.
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   if (!key || typeof window === "undefined") return;
-  distinctId ??= crypto.randomUUID();
+  distinctId ??=
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2) + Date.now().toString(36);
   fetch("/relay/i/v0/e/", {
     method: "POST",
     keepalive: true, // survives navigation/unload (booking_click, form_submit_*)

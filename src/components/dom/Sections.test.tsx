@@ -26,6 +26,12 @@ describe("DOM layer", () => {
     expect(screen.getByText(/Fixed quote/)).toBeInTheDocument();
     expect(screen.getByText(/runbook/)).toBeInTheDocument();
   });
+  it("contact section renders the form (button + status region)", () => {
+    render(<Sections />);
+    const button = screen.getByRole("button", { name: site.form.submitLabel });
+    expect(button.closest("section")?.id).toBe("contact");
+    expect(screen.getByRole("status")).toBeInTheDocument();
+  });
   it("agencies card links to the /agencies one-pager", () => {
     render(<Sections />);
     expect(screen.getByRole("link", { name: /one-pager for agencies/i })).toHaveAttribute(

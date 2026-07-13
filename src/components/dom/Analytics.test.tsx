@@ -23,11 +23,13 @@ class IOStub {
   }
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.stubGlobal("IntersectionObserver", IOStub);
   captureMock.mockClear();
   ioCallback = null;
   observed.length = 0;
+  const { resetScenesForTests } = await import("./Analytics");
+  resetScenesForTests(); // seen-set is module-scoped (once per hard load)
 });
 
 afterEach(() => {

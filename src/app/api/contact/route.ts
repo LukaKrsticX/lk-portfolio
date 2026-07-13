@@ -3,7 +3,8 @@ import { site } from "@/content/site";
 // Mirrors the client rule; comma/semicolon exclusion closes reply_to steering.
 const EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 // Name reaches the Resend subject — CR/LF/C0 rejection closes header injection.
-const CTRL_RE = /[\r\n\x00-\x1f]/;
+// Also reject DEL+C1 and Unicode bidi/format controls (RTL display spoofing).
+const CTRL_RE = /[\r\n\x00-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]/;
 
 const MIN_ELAPSED_MS = 2000;
 const PER_IP_MAX = 3;
@@ -59,6 +60,7 @@ function checkRateLimit(ip: string, now: number): { ok: true } | { ok: false; re
   }
   refresh(ipWin, now, PER_IP_WINDOW_MS);
   if (ipWin.count >= PER_IP_MAX) return { ok: false, retryAfter: retryAfterSec(ipWin, now) };
+  // Deliberate: globally-rejected attempts still burn the caller's per-IP slots.
   ipWin.count += 1;
 
   refresh(hourly, now, HOURLY_WINDOW_MS);
@@ -152,7 +154,8 @@ export async function POST(request: Request): Promise<Response> {
         from,
         to,
         subject: `Portfolio contact — ${name}`,
-        text: `From: ${name} <${email}>\n\n${message}`,
+        // Labeled lines: a bracket-bearing name must not read as an address pair.
+        text: `Name: ${name}\nEmail: ${email}\n\n${message}`,
         // Raw API is snake_case (SDK examples use replyTo; unknown fields are ignored).
         reply_to: email,
       }),

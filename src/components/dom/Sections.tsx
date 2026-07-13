@@ -1,6 +1,10 @@
 import Link from "next/link";
+import { BookingLink } from "@/components/dom/BookingLink";
 import { ContactForm } from "@/components/dom/ContactForm";
 import { site } from "@/content/site";
+import type { SiteContent } from "@/content/types";
+
+const contact: SiteContent["contact"] = site.contact;
 
 export function Sections() {
   return (
@@ -73,6 +77,11 @@ export function Sections() {
         <p style={{ marginTop: "1.5rem" }}>
           <a href={`mailto:${site.contact.email}`}>{site.contact.email}</a>
         </p>
+        {contact.bookingUrl && (
+          <p style={{ marginTop: 8 }}>
+            <BookingLink url={contact.bookingUrl} />
+          </p>
+        )}
         <p className="mono" style={{ marginTop: 8 }}>{site.contact.privacyNote}</p>
       </section>
     </main>

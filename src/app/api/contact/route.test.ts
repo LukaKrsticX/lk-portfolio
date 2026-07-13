@@ -74,6 +74,12 @@ describe("request guards", () => {
     expect(sendMock).not.toHaveBeenCalled();
   });
 
+  it("rejects bidi-override characters in name (subject display spoofing)", async () => {
+    const res = await POST(makeReq(validBody({ name: "evil‮moc.ycnega" })));
+    expect(res.status).toBe(400);
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
   it("rejects comma-smuggled email (reply_to steering guard)", async () => {
     const res = await POST(makeReq(validBody({ email: "a@b.co,evil@d.e" })));
     expect(res.status).toBe(400);
@@ -174,19 +180,33 @@ describe("rate limiting (3/10min per IP → 30/hr → 40/day global)", () => {
 
   it("evicts the soonest-expiring entry at the 500 cap and still tracks new IPs", async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(1_800_000_000_000);
-    // 501 distinct IPs, one request each (30 send, rest global-429; per-IP entries recorded first)
+    const t0 = 1_800_000_000_000;
+    // Distinct insert times → distinct resetAts → the eviction POLICY is observable.
     for (let i = 0; i < 501; i++) {
+      vi.setSystemTime(t0 + i * 10);
       await POST(makeReq(validBody(), { ip: `10.0.${Math.floor(i / 250)}.${i % 250}` }));
     }
     expect(limiterSizeForTests()).toBe(500);
+    vi.setSystemTime(t0 + 501 * 10);
     // The 501st IP IS tracked: two more requests reach its per-IP cap...
     await POST(makeReq(validBody(), { ip: "10.0.2.0" }));
     await POST(makeReq(validBody(), { ip: "10.0.2.0" }));
-    // ...and the 4th trips the PER-IP window (Retry-After 600), not the global one (3600)
-    const res = await POST(makeReq(validBody(), { ip: "10.0.2.0" }));
-    expect(res.status).toBe(429);
-    expect(res.headers.get("Retry-After")).toBe("600");
+    // ...and its 4th trips the PER-IP window (~600s), not a global one (~3600s+)
+    const fourth = await POST(makeReq(validBody(), { ip: "10.0.2.0" }));
+    expect(fourth.status).toBe(429);
+    expect(Number(fourth.headers.get("Retry-After"))).toBeLessThanOrEqual(600);
+    // Soonest-resetAt policy: the FIRST-inserted IP (10.0.0.0) was evicted → it
+    // re-tracks fresh and passes per-IP straight into the global window (~3600s),
+    // while a LATER survivor (10.0.1.200, count 1 retained) trips per-IP after
+    // only two more requests — distinguishing evict-soonest from evict-newest.
+    const evictedRetry = await POST(makeReq(validBody(), { ip: "10.0.0.0" }));
+    expect(evictedRetry.status).toBe(429);
+    expect(Number(evictedRetry.headers.get("Retry-After"))).toBeGreaterThan(600);
+    await POST(makeReq(validBody(), { ip: "10.0.1.200" }));
+    await POST(makeReq(validBody(), { ip: "10.0.1.200" }));
+    const survivorFourth = await POST(makeReq(validBody(), { ip: "10.0.1.200" }));
+    expect(survivorFourth.status).toBe(429);
+    expect(Number(survivorFourth.headers.get("Retry-After"))).toBeLessThanOrEqual(600);
   });
 
   it("missing x-real-ip falls back to a shared local key without throwing", async () => {
@@ -215,6 +235,8 @@ describe("send pipeline", () => {
     expect(payload.from).toBe("Portfolio <onboarding@resend.dev>");
     expect(payload.reply_to).toBe("jane@agency.co");
     expect(payload.subject).toContain("Jane Doe");
+    expect(payload.text).toContain("Name: Jane Doe");
+    expect(payload.text).toContain("Email: jane@agency.co");
     expect(payload.text).toContain("rescue");
     expect(payload.html).toBeUndefined();
   });

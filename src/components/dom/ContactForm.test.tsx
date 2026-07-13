@@ -61,6 +61,44 @@ describe("ContactForm", () => {
     );
   });
 
+  it("rejects a too-short message inline (mirrors the server 10-char minimum)", () => {
+    render(<ContactForm />);
+    fireEvent.change(screen.getByLabelText(site.form.nameLabel), { target: { value: "Jane" } });
+    fireEvent.change(screen.getByLabelText(site.form.emailLabel), {
+      target: { value: "jane@agency.co" },
+    });
+    fireEvent.change(screen.getByLabelText(site.form.messageLabel), {
+      target: { value: "Call me" },
+    });
+    submit();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByLabelText(site.form.messageLabel)).toHaveAccessibleDescription(
+      site.form.messageMin,
+    );
+  });
+
+  it("maps a server 400 to form_submit_fail {stage: validation}", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: false, errors: { message: "length" } }), { status: 400 }),
+    );
+    render(<ContactForm />);
+    fillValidForm();
+    submit();
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(site.form.failure));
+    expect(captureMock).toHaveBeenCalledWith("form_submit_fail", { stage: "validation" });
+  });
+
+  it("announces Sending… in the status region while pending", async () => {
+    let release: (r: Response) => void = () => {};
+    fetchMock.mockReturnValueOnce(new Promise<Response>((res) => (release = res)));
+    render(<ContactForm />);
+    fillValidForm();
+    submit();
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(site.form.sending));
+    release(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(site.form.success));
+  });
+
   it("happy path: posts JSON incl. elapsedMs + honeypot, announces success, fires form_submit_ok", async () => {
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     render(<ContactForm />);

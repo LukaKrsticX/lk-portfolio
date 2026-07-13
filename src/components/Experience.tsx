@@ -1,6 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader } from "@/components/Loader";
 import { capture } from "@/lib/analytics";
 import { SceneBoundary } from "@/components/gl/SceneBoundary";
@@ -53,10 +53,19 @@ export function Experience() {
       if (t === null || t === "low") return t;
       const demoted = demoteTier(t);
       if (debugTier() === null) persistTierCap(demoted);
-      capture("quality_tier_selected", { tier: demoted, cause: "demote" });
       return demoted;
     });
   }, []);
+
+  // Demote analytics fire on the committed state change, not inside the updater
+  // (updaters must stay pure; StrictMode double-invokes them).
+  const prevTier = useRef<Tier | null>(null);
+  useEffect(() => {
+    if (tier !== null && prevTier.current !== null && tier !== prevTier.current) {
+      capture("quality_tier_selected", { tier, cause: "demote" });
+    }
+    prevTier.current = tier;
+  }, [tier]);
 
   // tier !== null implies supportsWebGL() passed (detectTier only runs then).
   const showScene = booted && !reduced && tier !== null;
