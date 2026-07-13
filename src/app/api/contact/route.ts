@@ -2,9 +2,9 @@ import { site } from "@/content/site";
 
 // Mirrors the client rule; comma/semicolon exclusion closes reply_to steering.
 const EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
-// Name reaches the Resend subject — CR/LF/C0 rejection closes header injection.
+// Name reaches the Resend subject, email reaches reply_to and the body — CR/LF/C0 closes header injection.
 // Also reject DEL+C1 and Unicode bidi/format controls (RTL display spoofing).
-const CTRL_RE = /[\r\n\x00-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]/;
+const CTRL_RE = /[\r\n\x00-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/;
 
 const MIN_ELAPSED_MS = 2000;
 const PER_IP_MAX = 3;
@@ -112,7 +112,7 @@ export async function POST(request: Request): Promise<Response> {
   const errors: Record<string, string> = {};
   if (!name || name.length > 200) errors.name = "required";
   else if (CTRL_RE.test(name)) errors.name = "invalid";
-  if (!email || email.length > 320 || !EMAIL_RE.test(email)) errors.email = "invalid";
+  if (!email || email.length > 320 || !EMAIL_RE.test(email) || CTRL_RE.test(email)) errors.email = "invalid";
   if (message.length < 10 || message.length > 5000) errors.message = "length";
   if (Object.keys(errors).length > 0) {
     return jsonResponse({ ok: false, errors }, 400);

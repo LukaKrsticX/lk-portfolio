@@ -86,6 +86,18 @@ describe("request guards", () => {
     expect(sendMock).not.toHaveBeenCalled();
   });
 
+  it("rejects bidi/control characters in email (reply_to display spoofing guard)", async () => {
+    const res = await POST(makeReq(validBody({ email: "a@b.co‮xyz" })));
+    expect(res.status).toBe(400);
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects the Arabic letter mark in name (bidi guard completeness)", async () => {
+    const res = await POST(makeReq(validBody({ name: "x؜y" })));
+    expect(res.status).toBe(400);
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
   it("rejects a too-short message", async () => {
     const res = await POST(makeReq(validBody({ message: "hi" })));
     expect(res.status).toBe(400);
