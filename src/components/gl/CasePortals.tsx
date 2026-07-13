@@ -76,7 +76,7 @@ void main() {
   // departing card (uRel > 0) exits screen-left, so its inner edge — the
   // side facing the between-cards gap where the dust spine lives — is +x;
   // the arriving card mirrors to -x. step() not sign(): sign(0.0) is 0.0
-  // and would collapse the spine target to the card center; at uRel = 0,
+  // and would collapse the spine target onto the seam itself; at uRel = 0,
   // D = 0 zeroes every peel term, so edge's value there is moot.
   float D = abs(uRel);
   // Settled dead-zone: all GEOMETRY (wavefront, smear) keys off D_eff,
@@ -193,7 +193,7 @@ void main() {
   // SETTLED-STATE PURITY (uRel = 0, and the whole |uRel| ≤ 0.05
   // dead-zone): D_eff = 0 EXACTLY → shardProg = 0 → flight = 0 →
   // disp = (0,0,0) (uSeam only enters through disp·flight, so its value
-  // is irrelevant when settled); smear = 1 + 0.35·sin(0)·… = 1;
+  // is irrelevant when settled); smear = 1 + 0.12·sin(0)·… = 1;
   // vSmear = 0; shrink = 1 - 0 = 1; stretch adds fdir·(…)·sin(0) = 0;
   // tumble = 0 → chip = position.xy; vAlpha = (1 - 0)·(1 -
   // smoothstep(0.72, 1, 0)) = 1; vProg = 0 disables the fragment dust
@@ -427,9 +427,13 @@ export function CasePortals({ tier }: { tier: Tier }) {
       // a local point (lx, 0, 0) lands at world x ≈ worldX + lx·cos(rotY)
       // (local z is 0, and with the capped yaw the sin(rotY)·z leakage
       // from tiltZ is negligible); solving world x = 0 gives
-      // lx = -worldX / cos(rotY). max(cos, 0.5) guards the divide if
-      // ROT_CAP ever widens past ~60°. ASSIGNED every frame — a pure
-      // function of pose, so scrubbing rewinds the seam exactly.
+      // lx = -worldX / cos(rotY). max(cos, 0.5) bounds the divide — and
+      // it DOES engage at count=2: past |rel| ≈ 0.74, |rotY| tops 60°, so
+      // uSeam under-reaches and the near-faded dust (alpha ≤ ~0.3 there)
+      // drifts ≤ ~0.15 world off the seam instead of uSeam blowing up as
+      // cos → 0. Deliberate trade; continuous, and gone below that band.
+      // ASSIGNED every frame — a pure function of pose, so scrubbing
+      // rewinds the seam exactly.
       cards[i].material.uniforms.uSeam.value =
         -worldX / Math.max(Math.cos(rotY), 0.5);
     }
