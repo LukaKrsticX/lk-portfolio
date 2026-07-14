@@ -42,7 +42,7 @@ Completed 2026-07-14. Key facts every phase relies on:
 
 **Files:** Create `src/lib/virtual-scroll.ts`, `src/lib/virtual-scroll.test.ts`.
 
-- [ ] Write the test file FIRST (style: `portal.test.ts` invariants, explicit `dt` feeding, no fake timers). Cover at minimum:
+- [x] Write the test file FIRST (style: `portal.test.ts` invariants, explicit `dt` feeding, no fake timers). Cover at minimum:
   - `alphaEff(a, dt) = 1 - (1-a)^(dt*60)`: dt-invariance — stepping 2×(dt/2) ≈ 1×dt within 1e-3 on y after a wheel impulse; `alphaEff(a, 1/60) === a` exactly.
   - Cascade never overshoots: after any impulse sequence, `y` approaches target monotonically once input stops (no oscillation past target).
   - Inertia: single impulse total travel ≈ `GAIN×` raw delta (assert within tolerance of the calibrated constant); inertia decays below 0.01px within 2s.
@@ -51,36 +51,36 @@ Completed 2026-07-14. Key facts every phase relies on:
   - Tween: `tweenTo(x, 800)` reaches exactly `x` at t=800ms (easeInOutCubic), cascade still smooths y behind it; a wheel impulse mid-tween cancels the tween (user wins).
   - Deadband: |head−target| < 0.01 snaps (no infinite micro-lerp).
   - Determinism: same impulse+dt script twice → identical y trace.
-- [ ] Implement `createVirtualScroll(opts: { max: number })` returning `{ readonly y, readonly vel, applyWheel(deltaPx), step(dtSec), tweenTo(target, ms), setMax(n), lock(), unlock(), isLocked() }`. Internals per spec §3: `target += delta·WHEEL_MULT` (clamped); `inertia = inertia·0.9^(dt·60) + delta·INERTIA_INJECT`; per frame `target += inertia·dt·60` (clamped); `head = lerp(head, target, alphaEff(0.5, dt))` with 0.01px deadband; `y = lerp(y, head, alphaEff(0.1, dt))`. `vel` = (y − prevY)/dt computed in step. Constants exported for tuning: `WHEEL_MULT = 0.25`… calibrate `INERTIA_INJECT` so total flick travel ≈ 2.2× raw delta (document the geometric-sum derivation in a comment: Σ decay^n · dt·60 ≈ 10 at 0.9 → INJECT ≈ (2.2−0.25)/10 ≈ 0.2 — verify in the test, not by faith).
-- [ ] Pure TS, no DOM/three imports. Every function typed.
+- [x] Implement `createVirtualScroll(opts: { max: number })` returning `{ readonly y, readonly vel, applyWheel(deltaPx), step(dtSec), tweenTo(target, ms), setMax(n), lock(), unlock(), isLocked() }`. Internals per spec §3: `target += delta·WHEEL_MULT` (clamped); `inertia = inertia·0.9^(dt·60) + delta·INERTIA_INJECT`; per frame `target += inertia·dt·60` (clamped); `head = lerp(head, target, alphaEff(0.5, dt))` with 0.01px deadband; `y = lerp(y, head, alphaEff(0.1, dt))`. `vel` = (y − prevY)/dt computed in step. Constants exported for tuning: `WHEEL_MULT = 0.25`… calibrate `INERTIA_INJECT` so total flick travel ≈ 2.2× raw delta (document the geometric-sum derivation in a comment: Σ decay^n · dt·60 ≈ 10 at 0.9 → INJECT ≈ (2.2−0.25)/10 ≈ 0.2 — verify in the test, not by faith).
+- [x] Pure TS, no DOM/three imports. Every function typed.
 
 ### Task 1.2: Store rework — `src/lib/scroll.ts`
 
-- [ ] Replace `lenisRef` with `pipelineRef: { current: { frame(tMs: number): void } | null }` (drop the lenis type import — file becomes three-free AND lenis-free). Update `RafBridge.tsx` to `pipelineRef.current?.frame(t)` (keep addEffect timing comment).
-- [ ] Add `scrollMode = { virtual: false }` store + extend `scrollSignals` with `vel: 0, velN: 0, velSm: 0` (documented: written once per frame by Hero — single-writer discipline, `Hero.tsx:80-99` already computes `vel` for energy; extend there, do not add a second writer).
-- [ ] `measureScrollMetrics()`: when `scrollMode.virtual`, `maxScroll = max(1, vsRoot.offsetHeight − innerHeight)` (`#vs-root` by id); native branch unchanged. `offsetTop`-based metrics untouched (transform-independent).
-- [ ] Update `scroll.test.ts` stubs accordingly (add `#vs-root` fixture path for the virtual branch).
+- [x] Replace `lenisRef` with `pipelineRef: { current: { frame(tMs: number): void } | null }` (drop the lenis type import — file becomes three-free AND lenis-free). Update `RafBridge.tsx` to `pipelineRef.current?.frame(t)` (keep addEffect timing comment).
+- [x] Add `scrollMode = { virtual: false }` store + extend `scrollSignals` with `vel: 0, velN: 0, velSm: 0` (documented: written once per frame by Hero — single-writer discipline, `Hero.tsx:80-99` already computes `vel` for energy; extend there, do not add a second writer).
+- [x] `measureScrollMetrics()`: when `scrollMode.virtual`, `maxScroll = max(1, vsRoot.offsetHeight − innerHeight)` (`#vs-root` by id); native branch unchanged. `offsetTop`-based metrics untouched (transform-independent).
+- [x] Update `scroll.test.ts` stubs accordingly (add `#vs-root` fixture path for the virtual branch).
 
 ### Task 1.3: `VirtualScroll` component (replaces SmoothScroll's Lenis path)
 
 **Files:** rename `src/components/dom/SmoothScroll.tsx` → `VirtualScroll.tsx` (git mv; update import in `src/app/page.tsx`), rewrite `SmoothScroll.test.tsx` → `VirtualScroll.test.tsx`.
 
-- [ ] Keep verbatim: the always-on plumbing effect (metrics, `scrollState.y = window.scrollY` on native scroll, RO remeasure — `SmoothScroll.tsx:30-53`), `isPlainHashClick`, the header comment banning fiber imports, and the gating predicate `smooth = sceneLive && !reduced && !coarse && scrollOn`.
-- [ ] Replace the Lenis effect with the virtual-mode effect under the same predicate:
+- [x] Keep verbatim: the always-on plumbing effect (metrics, `scrollState.y = window.scrollY` on native scroll, RO remeasure — `SmoothScroll.tsx:30-53`), `isPlainHashClick`, the header comment banning fiber imports, and the gating predicate `smooth = sceneLive && !reduced && !coarse && scrollOn`.
+- [x] Replace the Lenis effect with the virtual-mode effect under the same predicate:
   - **Takeover:** create pipeline with measured max; seed `y = head = target = window.scrollY`; `window.scrollTo(0, 0)`; `document.documentElement.style.overflow = "hidden"`; `scrollMode.virtual = true`; remeasure. `#vs-root` gets `will-change: transform`.
   - **Frame fn** (registered on `pipelineRef`): compute dt from the addEffect timestamp (clamp 1/30); `pipeline.step(dt)`; `scrollState.y = pipeline.y`; write `translate3d(0, ${-y}px, 0)` to `#vs-root` (cache the element ref; round to 0.01px to avoid layout thrash from string churn).
   - **Inputs:** `wheel` listener `{ passive: false }` + `preventDefault()` → `applyWheel(normalized)` (deltaMode 1 → ×16px, deltaMode 2 → ×innerHeight); `keydown` (skip when target is input/textarea/select or `isContentEditable`): Space/Shift+Space ±0.85·innerHeight, PageDown/Up ±0.85·innerHeight, Home/End → 0/max, ArrowDown/Up ±60px — all via `tweenTo` (long) or direct target nudge (arrows); `focusin` on `#vs-root` → if focused el outside [15%, 85%] viewport band, `tweenTo` to center it; hash-anchor clicks (reuse `isPlainHashClick`) → `tweenTo(el.offsetTop)` + pushState + focus (same UX as today); `popstate` → `tweenTo(hash target)` or 0.
   - **Handback (cleanup):** capture `y`; null `pipelineRef`; restore overflow; `scrollMode.virtual = false`; clear transform; `window.scrollTo(0, y)`. Must be exact-position seamless both directions.
-- [ ] Remove lenis: `pnpm remove lenis`; delete `globals.css:25-30` `.lenis*` block; fix `agencies/page.tsx:10` comment.
-- [ ] `VirtualScroll.test.tsx` (template: old SmoothScroll.test.tsx structure, matchMedia stubs, sceneLive latch, `?scroll=0` flag): takeover sets overflow hidden + seeds from scrollY + zeroes window scroll; handback restores position exactly; wheel dispatch moves the transform after frame() ticks; focusin scrolls; predicate gating (reduced/coarse/flag → no takeover); popstate tween. Drive frames by calling `pipelineRef.current!.frame(t)` directly with synthetic timestamps.
-- [ ] Velocity bus in `Hero.tsx` useFrame: extend the existing vel computation (`:97-99`) to also write `scrollSignals.vel` (px/s), `velN = clamp(vel/2000, −1, 1)`, `velSm += (velN − velSm)·alphaEff(0.05, dt)` (import alphaEff from virtual-scroll). Keep `energy` exactly as is.
+- [x] Remove lenis: `pnpm remove lenis`; delete `globals.css:25-30` `.lenis*` block; fix `agencies/page.tsx:10` comment.
+- [x] `VirtualScroll.test.tsx` (template: old SmoothScroll.test.tsx structure, matchMedia stubs, sceneLive latch, `?scroll=0` flag): takeover sets overflow hidden + seeds from scrollY + zeroes window scroll; handback restores position exactly; wheel dispatch moves the transform after frame() ticks; focusin scrolls; predicate gating (reduced/coarse/flag → no takeover); popstate tween. Drive frames by calling `pipelineRef.current!.frame(t)` directly with synthetic timestamps.
+- [x] Velocity bus in `Hero.tsx` useFrame: extend the existing vel computation (`:97-99`) to also write `scrollSignals.vel` (px/s), `velN = clamp(vel/2000, −1, 1)`, `velSm += (velN − velSm)·alphaEff(0.05, dt)` (import alphaEff from virtual-scroll). Keep `energy` exactly as is.
 
 ### Task 1.4: Phase gate
 
-- [ ] Regression gate green (expect budget ↓ ~7-8KB from Lenis removal). Record the measured number here.
-- [ ] Manual verify (`pnpm dev` + playwright-cli): feel of cascade (flick → long S-curve settle with tail); anchor nav; keyboard set; tab-through form fields scrolls; `?scroll=0` → native byte-identical; DevTools reduced-motion emulation → native; mid-page reload/deep-link seeds without jump; back/forward.
-- [ ] Anti-guards checked: no fiber import in VirtualScroll; single `scrollState.y` writer per mode; Nav stays outside `#vs-root` (wrap ONLY `<Sections/>` in `page.tsx`); no `position:sticky` inside the root (grep).
-- [ ] Commit `feat(s6): virtual scroll pipeline + velocity bus, lenis retired`.
+- [x] Regression gate green (expect budget ↓ ~7-8KB from Lenis removal). Record the measured number here. **Measured (post scroll-leak fix): 438.1KB gz / 550 limit (baseline 442.4 → −4.3KB net; Lenis ~−8KB minus ~+3.7KB pipeline). test 204 pass / 24 files (was 168/23), lint clean, build TS-strict clean. Verifier BLOCKER (native scrollY leaks stacking with the transform) closed via instant zeroing + scroll-pin absorb + hash-aware seeding + docTop absolute targets; MINOR (maxScroll ~30px short) closed via document-space `offsetTop + offsetHeight − innerHeight`.**
+- [x] Manual verify (playwright, 2 rounds): cascade 2.20× flick gain + inertia settle; anchor #work err −0.79px; End/Home ±1px with End = true bottom (2789 = native max); Tab-focus into contact form pinned (scrollY 0 across 7 hops, center err ≤0.63px); deep-link /#contact deterministic 3/3 (err 0px, landing matches native 161px); `?scroll=0` and reduced-motion → native untouched; console clean (only pre-existing THREE.Clock deprecation).
+- [x] Anti-guards checked: no fiber import in VirtualScroll; single `scrollState.y` writer per mode; Nav stays outside `#vs-root` (wrap ONLY `<Sections/>` in `page.tsx`); no `position:sticky` inside the root (grep). **All clean — see report.**
+- [x] Commit `feat(s6): virtual scroll pipeline + velocity bus, lenis retired`.
 
 ## Phase 2 — Key points + camera rig + helix parametric morph (MVP part 2)
 

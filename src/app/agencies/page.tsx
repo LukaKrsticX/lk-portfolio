@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: site.agenciesMeta.description,
 };
 
-/** Forwardable one-pager — plain DOM, no canvas/Lenis, safe to paste into Slack. */
+/** Forwardable one-pager — plain DOM, no canvas/virtual scroll, safe to paste into Slack. */
 export default function AgenciesPage() {
   return (
     <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px" }}>

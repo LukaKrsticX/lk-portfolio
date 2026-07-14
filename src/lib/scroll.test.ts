@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clamp01, easeInOutSine, smoothstep01, stepEnergy,
-  scrollState, scrollMetrics, scrollSignals, measureScrollMetrics,
+  scrollState, scrollMetrics, scrollSignals, scrollMode, measureScrollMetrics,
   getSceneLive, setSceneLive, subscribeSceneLive,
 } from "./scroll";
 
@@ -47,6 +47,9 @@ describe("measureScrollMetrics", () => {
     scrollMetrics.workStart = 1;
     scrollMetrics.workSpan = 1;
   });
+  afterEach(() => {
+    scrollMode.virtual = false; // never leak virtual mode into a later native-branch case
+  });
   it("floors both metrics at 1 when the document is short/unmeasurable", () => {
     measureScrollMetrics(); // jsdom: zero-height layout, scrollingElement undefined
     expect(scrollMetrics.maxScroll).toBeGreaterThanOrEqual(1);
@@ -70,6 +73,33 @@ describe("measureScrollMetrics", () => {
     expect(scrollMetrics.maxScroll).toBe(4000);
     expect(scrollMetrics.heroEnd).toBe(900);
     hero.remove();
+  });
+  it("virtual mode: maxScroll = #vs-root offsetTop + offsetHeight − innerHeight, not the document", () => {
+    // In virtual mode the body is overflow:hidden (scrollHeight collapses); the
+    // transformed content container is the source of the travel range — in DOCUMENT space
+    // (offsetTop + offsetHeight): #vs-root sits below the sticky Nav, so height alone
+    // would under-measure the range by Nav's height.
+    Object.defineProperty(document, "scrollingElement", {
+      value: document.documentElement,
+      configurable: true,
+    });
+    Object.defineProperty(document.scrollingElement!, "scrollHeight", { value: 800, configurable: true });
+    Object.defineProperty(window, "innerHeight", { value: 1000, configurable: true });
+    const root = document.createElement("div");
+    root.id = "vs-root";
+    document.body.appendChild(root);
+    Object.defineProperty(root, "offsetTop", { value: 30, configurable: true }); // below the Nav
+    Object.defineProperty(root, "offsetHeight", { value: 6000, configurable: true });
+    scrollMode.virtual = true;
+    measureScrollMetrics();
+    expect(scrollMetrics.maxScroll).toBe(5030); // 30 + 6000 - 1000, ignoring the 800 document height
+    root.remove();
+  });
+  it("virtual mode with no #vs-root floors maxScroll at 1 (no NaN)", () => {
+    Object.defineProperty(window, "innerHeight", { value: 1000, configurable: true });
+    scrollMode.virtual = true;
+    measureScrollMetrics();
+    expect(scrollMetrics.maxScroll).toBe(1);
   });
   it("computes workStart/workSpan from #work per the 0.6/0.2-viewport formula", () => {
     Object.defineProperty(window, "innerHeight", { value: 1000, configurable: true });

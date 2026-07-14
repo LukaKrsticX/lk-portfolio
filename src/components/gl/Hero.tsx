@@ -5,6 +5,7 @@ import { Color, DoubleSide, Group, MeshPhysicalMaterial } from "three";
 import { debugFlag } from "@/lib/debug-flags";
 import type { Tier } from "@/lib/quality";
 import { clamp01, easeInOutSine, scrollMetrics, scrollSignals, scrollState, stepEnergy } from "@/lib/scroll";
+import { alphaEff } from "@/lib/virtual-scroll";
 import { CasePortals } from "./CasePortals";
 import { buildEnvironmentTexture } from "./env-texture";
 import { HelixRibbon } from "./HelixRibbon";
@@ -97,6 +98,11 @@ export function Hero({ tier, onReady }: { tier: Tier; onReady: () => void }) {
     prevY.current = y;
     energyRef.current = stepEnergy(energyRef.current, Math.min(1, Math.abs(vel) / 1800), dt);
     scrollSignals.energy = energyRef.current;
+    // Velocity bus (single writer — spec §3): raw px/s, normalized ±1 at 2000px/s, and a
+    // long-tail smooth for the axis bow / echo / chromatic consumers.
+    scrollSignals.vel = vel;
+    scrollSignals.velN = vel > 2000 ? 1 : vel < -2000 ? -1 : vel / 2000;
+    scrollSignals.velSm += (scrollSignals.velN - scrollSignals.velSm) * alphaEff(0.05, dt);
 
     if (choreoOn) {
       const { p: scrollP, heroP } = scrollSignals;
