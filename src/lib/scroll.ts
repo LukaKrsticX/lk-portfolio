@@ -1,3 +1,5 @@
+import { type Keypoints, measureKeypoints, type SectionRect } from "./keypoints";
+
 /** Single number written by the scroll writer (native scroll OR the virtual pipeline). */
 export const scrollState = { y: 0 };
 
@@ -13,6 +15,16 @@ export const scrollSignals = { p: 0, heroP: 0, workP: 0, energy: 0, vel: 0, velN
 
 /** Active scroll writer: native scroll (false) or the virtual pipeline (true). */
 export const scrollMode = { virtual: false };
+
+/**
+ * Section anchors on p — rebuilt whole by measureScrollMetrics (mount + resize/RO), read
+ * per frame by the helix morph, camera rig and (later) palette/burst triggers. Seeded empty;
+ * blendAt on empty degrades to a rest-holding blend, so consumers stay NaN-free before mount.
+ */
+export const keypointsStore: { current: Keypoints } = { current: measureKeypoints([], 1, 1) };
+
+/** Canonical section order for keypoint measurement — MUST match the DOM section ids. */
+const SECTION_IDS = ["hero", "services", "work", "process", "about", "contact"] as const;
 
 /**
  * Bridge: VirtualScroll (DOM side) registers a per-tick frame fn; RafBridge (GL side) feeds it
@@ -57,6 +69,15 @@ export function measureScrollMetrics(): void {
     scrollMetrics.workStart = Math.max(1, work.offsetTop - 0.6 * window.innerHeight);
     scrollMetrics.workSpan = Math.max(1, work.offsetHeight + 0.2 * window.innerHeight);
   }
+  // Section anchors — rebuilt WHOLE from the six section rects each measure (reset-first
+  // discipline: a removed section simply drops out, never leaves stale anchors). offsetTop
+  // is transform-independent, so this is correct in both native and virtual mode.
+  const rects: SectionRect[] = [];
+  for (const id of SECTION_IDS) {
+    const el = document.getElementById(id);
+    if (el) rects.push({ id, offsetTop: el.offsetTop, offsetHeight: el.offsetHeight });
+  }
+  keypointsStore.current = measureKeypoints(rects, scrollMetrics.maxScroll, window.innerHeight);
 }
 
 // --- scene-live store: set from inside the Canvas, consumed by VirtualScroll ---

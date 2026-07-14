@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clamp01, easeInOutSine, smoothstep01, stepEnergy,
   scrollState, scrollMetrics, scrollSignals, scrollMode, measureScrollMetrics,
-  getSceneLive, setSceneLive, subscribeSceneLive,
+  getSceneLive, setSceneLive, subscribeSceneLive, keypointsStore,
 } from "./scroll";
 
 describe("easing helpers", () => {
@@ -145,6 +145,31 @@ describe("measureScrollMetrics", () => {
     measureScrollMetrics();
     expect(scrollMetrics.workStart).toBe(1);
     expect(scrollMetrics.workSpan).toBe(1);
+  });
+});
+
+describe("keypointsStore population", () => {
+  it("rebuilds section anchors in canonical order, dropping missing sections", () => {
+    Object.defineProperty(document, "scrollingElement", { value: document.documentElement, configurable: true });
+    Object.defineProperty(document.scrollingElement!, "scrollHeight", { value: 6000, configurable: true });
+    Object.defineProperty(window, "innerHeight", { value: 1000, configurable: true });
+    // Only hero + work present (services/process/about/contact missing) — must skip them.
+    const mk = (id: string, top: number, h: number): HTMLElement => {
+      const el = document.createElement("section");
+      el.id = id;
+      document.body.appendChild(el);
+      Object.defineProperty(el, "offsetTop", { value: top, configurable: true });
+      Object.defineProperty(el, "offsetHeight", { value: h, configurable: true });
+      return el;
+    };
+    const hero = mk("hero", 0, 1000);
+    const work = mk("work", 2000, 1500);
+    measureScrollMetrics();
+    expect(keypointsStore.current.anchors.map((a) => a.id)).toEqual(["hero", "work"]);
+    expect(keypointsStore.current.anchors[0].p).toBeCloseTo(0);
+    expect(keypointsStore.current.anchors[1].p).toBeCloseTo(2000 / 5000); // maxScroll 6000-1000
+    hero.remove();
+    work.remove();
   });
 });
 

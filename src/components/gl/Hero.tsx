@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { Color, DoubleSide, Group, MeshPhysicalMaterial } from "three";
 import { debugFlag } from "@/lib/debug-flags";
 import type { Tier } from "@/lib/quality";
-import { clamp01, easeInOutSine, scrollMetrics, scrollSignals, scrollState, stepEnergy } from "@/lib/scroll";
+import { clamp01, scrollMetrics, scrollSignals, scrollState, stepEnergy } from "@/lib/scroll";
 import { alphaEff } from "@/lib/virtual-scroll";
 import { CasePortals } from "./CasePortals";
 import { buildEnvironmentTexture } from "./env-texture";
@@ -18,9 +18,6 @@ export function Hero({ tier, onReady }: { tier: Tier; onReady: () => void }) {
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
   const camera = useThree((s) => s.camera);
-  const group = useRef<Group>(null);
-  const drift = useRef(0);
-  const scrollGroup = useRef<Group>(null);
   const monogramGroup = useRef<Group>(null);
   const prevY = useRef(0);
   const primed = useRef(false);
@@ -80,12 +77,9 @@ export function Hero({ tier, onReady }: { tier: Tier; onReady: () => void }) {
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, 1 / 30); // hidden-tab delta clamp
-    drift.current += dt;
 
-    // Scroll signals: derived once per frame (Hero is the single writer), read
-    // by HelixRibbon. Must run before the group-null early return so signals
-    // keep flowing even on null-ref frames.
-    // (child subscribes first → HelixRibbon reads last frame's values; accepted: one-frame lag on a smooth envelope)
+    // Scroll signals: derived once per frame (Hero is the single writer), read by the helix
+    // axis and CameraRig (one-frame lag accepted — smooth envelopes).
     const y = scrollState.y;
     if (!primed.current) {
       prevY.current = y; // deep-link/restore landing: no first-frame velocity burst
@@ -104,14 +98,10 @@ export function Hero({ tier, onReady }: { tier: Tier; onReady: () => void }) {
     scrollSignals.velN = vel > 2000 ? 1 : vel < -2000 ? -1 : vel / 2000;
     scrollSignals.velSm += (scrollSignals.velN - scrollSignals.velSm) * alphaEff(0.05, dt);
 
+    // Monogram recede leaving #hero (heroP-driven, shared material → recede not opacity). The
+    // scrollGroup dolly/sway and pointer-parallax idle-sway are retired — CameraRig owns motion.
     if (choreoOn) {
-      const { p: scrollP, heroP } = scrollSignals;
-      const sg = scrollGroup.current;
-      if (sg) {
-        sg.position.y = 0.5 * scrollP; // slower-than-DOM parallax lag
-        sg.position.z = -0.9 * easeInOutSine(scrollP); // composition recedes (camera-dolly equivalent)
-        sg.rotation.y = 0.15 * Math.sin(scrollP * Math.PI); // half-sweep, returns to 0 at page end
-      }
+      const heroP = scrollSignals.heroP;
       const mg = monogramGroup.current;
       if (mg) {
         mg.rotation.y = -0.85 * heroP * heroP; // monogram turns away leaving #hero
@@ -119,29 +109,19 @@ export function Hero({ tier, onReady }: { tier: Tier; onReady: () => void }) {
         mg.scale.setScalar(1.2 * (1 - 0.22 * heroP)); // shrink in concert (setScalar — no allocs)
       }
     }
-
-    const g = group.current;
-    if (!g) return;
-    const p = pointer.current.ndc;
-    // Slow drift + eased mouse parallax.
-    const targetY = p.x * 0.22 + Math.sin(drift.current * 0.19) * 0.07;
-    const targetX = -p.y * 0.14 + Math.cos(drift.current * 0.23) * 0.05;
-    g.rotation.y += (targetY - g.rotation.y) * Math.min(1, dt * 3);
-    g.rotation.x += (targetX - g.rotation.x) * Math.min(1, dt * 3);
   });
 
   return (
     <>
       <RippleBackground trail={trail} />
-      {/* Sibling of scrollGroup ON PURPOSE: portals must not inherit the recede-dolly/sway. */}
       {portalsOn && <CasePortals tier={tier} />}
-      <group ref={scrollGroup}>
-        <group ref={group} scale={tier === "low" ? 0.9 : 1}>
-          <group ref={monogramGroup} scale={1.2}>
-            <Monogram material={material} />
-          </group>
-          <HelixRibbon material={material} choreo={choreoOn} />
+      {/* CameraRig (Scene.tsx) owns dolly/sway/parallax now — this group is a static
+          scale wrapper; the monogram recede stays Hero's (heroP-driven). */}
+      <group scale={tier === "low" ? 0.9 : 1}>
+        <group ref={monogramGroup} scale={1.2}>
+          <Monogram material={material} />
         </group>
+        <HelixRibbon material={material} choreo={choreoOn} />
       </group>
     </>
   );

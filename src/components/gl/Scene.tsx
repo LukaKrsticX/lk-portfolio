@@ -4,6 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { useCallback, useState } from "react";
 import type { Tier } from "@/lib/quality";
 import { DPR_CAP } from "@/lib/quality";
+import { CameraRig } from "./CameraRig";
 import { Hero } from "./Hero";
 import { RafBridge } from "./RafBridge";
 
@@ -35,6 +36,7 @@ export default function Scene({ tier, onDemote }: { tier: Tier; onDemote: () => 
             so a reachable upper bound would flag healthy 60Hz machines. */}
         <PerformanceMonitor bounds={() => [50, 1000]} onDecline={onDemote} />
         <RafBridge />
+        <CameraRig />
         <Hero tier={tier} onReady={handleReady} />
       </Canvas>
     </div>
