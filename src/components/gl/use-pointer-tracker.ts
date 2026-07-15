@@ -6,10 +6,13 @@ import { pointerToUv } from "@/lib/pointer";
 export interface PointerState {
   /** uv in [0,1]², y up */
   readonly uv: Vector2;
-  /** ndc in [-1,1]², y up — for parallax */
+  /** ndc in [-1,1]², y up — for parallax and the card Raycaster */
   readonly ndc: Vector2;
   /** accumulated uv delta since last consume; exactly ONE consumer owns it (the ripple sim) and zeroes it after reading each frame */
   readonly velocity: Vector2;
+  /** raw CSS pixel coords (y DOWN) — for document.elementFromPoint (the card-raycast interactive-DOM guard) */
+  clientX: number;
+  clientY: number;
   moved: boolean;
 }
 
@@ -24,6 +27,8 @@ export function usePointerTracker(): RefObject<PointerState> {
     uv: new Vector2(0.5, 0.5),
     ndc: new Vector2(0, 0),
     velocity: new Vector2(0, 0),
+    clientX: 0,
+    clientY: 0,
     moved: false,
   });
 
@@ -43,6 +48,9 @@ export function usePointerTracker(): RefObject<PointerState> {
       }
       s.uv.set(u, v);
       s.ndc.set(u * 2 - 1, v * 2 - 1);
+      // Raw CSS coords for the card-raycast guard — elementFromPoint expects layout px, y down.
+      s.clientX = e.clientX;
+      s.clientY = e.clientY;
       s.moved = true;
     };
     window.addEventListener("pointermove", onMove, { passive: true });

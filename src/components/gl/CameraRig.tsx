@@ -2,9 +2,11 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import { MathUtils, PerspectiveCamera, Vector3 } from "three";
+import { site } from "@/content/site";
 import { debugFlag } from "@/lib/debug-flags";
 import { blendAt } from "@/lib/keypoints";
 import { keypointsStore, scrollSignals } from "@/lib/scroll";
+import { railWaypoint } from "@/lib/workrail";
 import { usePointerTracker } from "./use-pointer-tracker";
 
 type Vec3 = readonly [number, number, number];
@@ -33,26 +35,27 @@ const WAYPOINTS: Record<string, Waypoint> = {
   contact: { pos: [0, 0, 3.4], look: [0, 0, 0], fov: 40, moveXY: [0.25, 0.14] },
 };
 
-// Work rail — P2 PLACEHOLDER: a 2-point dive across the work span (workP). P3 replaces this with
-// railWaypoint(workP, N) from workrail.ts (camera dives card-to-card along the opened axis).
-const RAIL_START: Waypoint = { pos: [0.25, 0, 3.0], look: [0, 0, -1.0], fov: 34, moveXY: [0.2, 0.12] };
-const RAIL_END: Waypoint = { pos: [-0.25, 0, 2.6], look: [0, 0, -1.2], fov: 34, moveXY: [0.2, 0.12] };
+// Work rail: the camera dives card-to-card along the opened axis via railWaypoint(workP, N)
+// (workrail.ts). N is the case count — the rail is N-generic and continuous (no snap; the cascade
+// settles). This replaces the P2 two-point placeholder.
+const CARD_COUNT = site.cases.length;
 
 const clampSym = (v: number, m: number): number => (v > m ? m : v < -m ? -m : v);
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
-const lerpV3 = (a: Vec3, b: Vec3, t: number, out: Vector3): Vector3 =>
-  out.set(lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t));
 // Framerate-normalized lerp factor (mirrors virtual-scroll.alphaEff) for the fov/wobble/roll
 // timescales — kept local so this component stays free of the scroll-pipeline import.
 const alphaEff = (a: number, dt: number): number => 1 - Math.pow(1 - a, dt * 60);
 
 function waypointFor(id: string, workP: number, out: { pos: Vector3; look: Vector3; fov: number; moveXY: [number, number] }): void {
   if (id === "work") {
-    lerpV3(RAIL_START.pos, RAIL_END.pos, workP, out.pos);
-    lerpV3(RAIL_START.look, RAIL_END.look, workP, out.look);
-    out.fov = lerp(RAIL_START.fov, RAIL_END.fov, workP);
-    out.moveXY[0] = lerp(RAIL_START.moveXY[0], RAIL_END.moveXY[0], workP);
-    out.moveXY[1] = lerp(RAIL_START.moveXY[1], RAIL_END.moveXY[1], workP);
+    // Camera dives card-to-card along the axis. railWaypoint also returns an orienting quat, but
+    // the rig keeps its own damped lookAt pipeline (below), so only pos/look/fov/moveXY are used.
+    const rw = railWaypoint(workP, CARD_COUNT);
+    out.pos.set(rw.pos[0], rw.pos[1], rw.pos[2]);
+    out.look.set(rw.look[0], rw.look[1], rw.look[2]);
+    out.fov = rw.fov;
+    out.moveXY[0] = rw.moveXY[0];
+    out.moveXY[1] = rw.moveXY[1];
     return;
   }
   const w = WAYPOINTS[id] ?? HERO;

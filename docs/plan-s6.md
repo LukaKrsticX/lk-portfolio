@@ -117,39 +117,43 @@ Completed 2026-07-14. Key facts every phase relies on:
 
 ### Task 3.1: `src/lib/workrail.ts` (+ tests first)
 
-- [ ] Tests: pose continuity in workP; N-generic (test N=2 and N=5); camera waypoint per card faces card; `cardProgress` monotonic, exact integers at card centers; rotation cap honored.
-- [ ] Implement: `cardPose(i, N)` → `{position: [x,y,z], rotationY}` on the axis (angular step `−50°·(scaled by N)`, radius 1.15, pitch step along axis; rotation capped ROT_CAP 0.45 — continuity with retired ring); `railWaypoint(workP, N)` → camera pos/quat target along the card sequence (linear index, floor+fract, NO snap — the cascade supplies the settle); `cardProgress(workP, N)`.
+- [x] Tests: pose continuity in workP; N-generic (test N=2 and N=5); camera waypoint per card faces card; `cardProgress` monotonic, exact integers at card centers; rotation cap honored. **17 tests in `src/lib/workrail.test.ts` (green).**
+- [x] Implement: `cardPose(i, N)` → `{position: [x,y,z], rotationY}` on the axis (angular step `−50°·(scaled by N)`, radius 1.15, pitch step along axis; rotation capped ROT_CAP 0.45 — continuity with retired ring); `railWaypoint(workP, N)` → camera pos/quat target along the card sequence (linear index, floor+fract, NO snap — the cascade supplies the settle); `cardProgress(workP, N)`. **`src/lib/workrail.ts` — axis-local card poses + world-space camera rail; `−50°` is the constant adjacent-card step, the SET is centered so it stays N-generic (the "scaled by N"); rotationY is `clampSym(angle, ROT_CAP)`; rail uses floor+fract on `cardProgress` (no snap) and returns pos/quat(lookQuat)/look/fov/moveXY.**
 
 ### Task 3.2: `src/components/gl/HelixCards.tsx` (replaces CasePortals)
 
-- [ ] New component: per case (N=2) a SINGLE PlaneGeometry(1.6, 1.0) quad + ShaderMaterial. Uniform block set once (transparent: true, depthWrite: false — constant, per trap discipline). Texture pattern copied from `CasePortals.tsx:301-306,366-369` (placeholder + async swap, SRGBColorSpace, anisotropy 4 on med+).
-- [ ] Fragment (harvested vocabulary, cite spec D2): rounded-rect SDF corner mask (r 0.05, feather 0.008); 5-tap horizontal directional smear with per-frame `uSmear = k·|velSm|` (settled ⇒ all taps same texel — EXACT purity); dark card-back slate `#0a1420` on back faces; brightness `mix(0.65, 0.9, uHover)`; brand-pool radial lift centered on `uHoverPoint` (card-local uv, slides toward cursor), pool strength `0.3→0.5·uHover`; transient flash `sin(π·uHover)·0.3`.
-- [ ] Vertex: hover push `position.z += 0.2·uHover` toward camera (camera-ward = +local z, cards face outward) + subtle breathing `sin(uTime·0.5 + i·1.3)·0.01` (per-card phase constant, their free-stagger idea with OUR values).
-- [ ] Mount cards as children of the axis group at `cardPose` positions; gate with `debugFlag("work")` (RENAME from `portals` — update `Hero.tsx:33,131`). `visible` gate on the work window like `CasePortals.tsx:393`.
-- [ ] CameraRig: replace the P2 placeholder rail with `railWaypoint` (dive along the axis card-to-card).
-- [ ] DELETE `CasePortals.tsx`; in `lib/portal.ts` keep ONLY `mulberry32` → `git mv` the survivor into `src/lib/prng.ts` (+ move its 3 tests), delete the rest + their tests. Grep for dangling imports.
+- [x] New component: per case (N=2) a SINGLE PlaneGeometry(1.6, 1.0) quad + ShaderMaterial. Uniform block set once (transparent: true, depthWrite: false — constant, per trap discipline). Texture pattern copied from `CasePortals.tsx:301-306,366-369` (placeholder + async swap, SRGBColorSpace, anisotropy 4 on med+). **`src/components/gl/HelixCards.tsx` — one shared geometry, per-card material; placeholder `#0a1420` DataTexture + `TextureLoader.load` async swap.**
+- [x] Fragment (harvested vocabulary, cite spec D2): rounded-rect SDF corner mask (r 0.05, feather 0.008); 5-tap horizontal directional smear with per-frame `uSmear = k·|velSm|` (settled ⇒ all taps same texel — EXACT purity); dark card-back slate `#0a1420` on back faces; brightness `mix(0.65, 0.9, uHover)`; brand-pool radial lift centered on `uHoverPoint` (card-local uv, slides toward cursor), pool strength `0.3→0.5·uHover`; transient flash `sin(π·uHover)·0.3`. **SMEAR_K 0.016; brand pool = site --accent #4da6e8, strength `mix(0.3,0.5,uHover)·uHover` (0 at rest), center `mix(0.5, uHoverPoint, uHover)`; flash `sin(π·uHover)·0.3`.**
+- [x] Vertex: hover push `position.z += 0.2·uHover` toward camera (camera-ward = +local z, cards face outward) + subtle breathing `sin(uTime·0.5 + i·1.3)·0.01` (per-card phase constant, their free-stagger idea with OUR values).
+- [x] Mount cards as children of the axis group at `cardPose` positions; gate with `debugFlag("work")` (RENAME from `portals` — update `Hero.tsx:33,131`). `visible` gate on the work window like `CasePortals.tsx:393`. **HelixCards root group replicates HelixRibbon's drift transform (morphAt drift/tilt/scale) so cards share the strands' local frame WITHOUT the spin; mounted inside Hero's tier-scale group; `visible = workP>0.001 && <0.999`.**
+- [x] CameraRig: replace the P2 placeholder rail with `railWaypoint` (dive along the axis card-to-card). **`CameraRig.tsx` work branch calls `railWaypoint(workP, site.cases.length)`; RAIL_START/END + lerpV3 removed.**
+- [x] DELETE `CasePortals.tsx`; in `lib/portal.ts` keep ONLY `mulberry32` → `git mv` the survivor into `src/lib/prng.ts` (+ move its 3 tests), delete the rest + their tests. Grep for dangling imports. **Done via `git mv` (history preserved); prng.ts/prng.test.ts trimmed to mulberry32 only; no dangling refs (only comment citations remain).**
 
 ### Task 3.3: Hover/click plumbing — `src/components/gl/use-card-raycast.ts`
 
-- [ ] Manual raycast per frame (copy pointer source pattern; Phase-0 fact: R3F events dead): `Raycaster.setFromCamera(pointer.ndc, camera)` → `intersectObjects(cardMeshes, false, reusedArray)`; guard: skip entirely when `document.elementFromPoint(clientX, clientY)` is interactive (`closest("a,button,input,textarea,select,[role=button],[tabindex]")`) — track clientXY in the pointer tracker (extend `use-pointer-tracker.ts` state; keep passive listeners).
-- [ ] Per-card `uHover` eased α 0.08 toward hit state; `uHoverPoint` follows hit uv. `document.body.style.cursor = "pointer"` only while hit && no interactive DOM under cursor (restore on miss/unmount).
-- [ ] Window `click` listener with the same guard → for P3, fire `capture("work_card_click", {slug})` + no-op (portal lands P4).
-- [ ] Component test for the guard logic where extractable (pure helpers into `lib/`).
+- [x] Manual raycast per frame (copy pointer source pattern; Phase-0 fact: R3F events dead): `Raycaster.setFromCamera(pointer.ndc, camera)` → `intersectObjects(cardMeshes, false, reusedArray)`; guard: skip entirely when `document.elementFromPoint(clientX, clientY)` is interactive (`closest("a,button,input,textarea,select,[role=button],[tabindex]")`) — track clientXY in the pointer tracker (extend `use-pointer-tracker.ts` state; keep passive listeners). **`src/components/gl/use-card-raycast.ts` uses the real rig-driven camera (useThree); also gated on the workP window (a Raycaster tests a mesh's own visible flag, not the ancestor group's — else hidden off-window cards would take hits). clientX/clientY added to PointerState.**
+- [x] Per-card `uHover` eased α 0.08 toward hit state; `uHoverPoint` follows hit uv. `document.body.style.cursor = "pointer"` only while hit && no interactive DOM under cursor (restore on miss/unmount).
+- [x] Window `click` listener with the same guard → for P3, fire `capture("work_card_click", {slug})` + no-op (portal lands P4). **`work_card_click` added to the analytics event union.**
+- [x] Component test for the guard logic where extractable (pure helpers into `lib/`). **`src/lib/card-raycast.ts` (`isInteractiveTarget`, `hoverStep`) + `card-raycast.test.ts` — 7 tests.**
 
 ### Task 3.4: Title echo — `src/components/gl/CardTitle.tsx`
 
-- [ ] Canvas2D texture per title (`CanvasTexture`, 2× res, mono font matching site, transparent bg, drawn once per mount — no per-frame redraws); plane above/beside each card.
-- [ ] Echo shader: `uEcho = |velSm|` smoothed α0.05; ghost columns `fract(uv.x·15)`, per-column offset ∝ uEcho; RGB split `mix(0.001, 0.02, uEcho)` @120°; vertical drag 0.15·uEcho; settled (uEcho→0) ⇒ single clean sample EXACTLY (write the shader so every echo term multiplies by uEcho).
-- [ ] Dispose canvases/textures on unmount.
+- [x] Canvas2D texture per title (`CanvasTexture`, 2× res, mono font matching site, transparent bg, drawn once per mount — no per-frame redraws); plane above/beside each card. **`src/components/gl/CardTitle.tsx` — 1024×256 canvas, uppercase JetBrains Mono→monospace, `#e8f4ff`, auto-fit to width; plane above each card (offset y 0.72); rendered inside each card group by HelixCards.**
+- [x] Echo shader: `uEcho = |velSm|` smoothed α0.05; ghost columns `fract(uv.x·15)`, per-column offset ∝ uEcho; RGB split `mix(0.001, 0.02, uEcho)` @120°; vertical drag 0.15·uEcho; settled (uEcho→0) ⇒ single clean sample EXACTLY (write the shader so every echo term multiplies by uEcho). **Purity is STRUCTURAL: an outer `mix(base, echoed, clamp(uEcho,0,1))` returns `base` exactly at uEcho=0; internal offsets (drag `0.15·uEcho`, split `mix(0.001,0.02,uEcho)·uEcho`) also collapse to 0.**
+- [x] Dispose canvases/textures on unmount. **geometry/material/texture disposed; the canvas element is then GC'd.**
 
 ### Task 3.5: Phase gate
 
-- [ ] Regression gate green (CasePortals tests deleted with it; suite still ≥ baseline count via new tests).
-- [ ] Visual: cards sit on the axis through the work window; camera rail dives past both; hover grows/brightens/pool-follows; echo doubles titles on hard flick and is pixel-clean at rest (screenshot diff rest vs static); DOM #work column still readable alongside; `?work=0` kills the GL cards only.
-- [ ] Budget checkpoint vs projection (P3 est +12KB).
-- [ ] Commit `feat(s6): helix-mounted work cards + hover physics + title echo; case-portals peel retired`.
+- [x] Regression gate green (CasePortals tests deleted with it; suite still ≥ baseline count via new tests). **test 227 pass / 27 files (was 222/25: −19 deleted portal tests [PORTAL_RING/ringPose/cardRel/shardScatterAttrs; kept 3 mulberry32 → prng.test.ts], +17 workrail, +7 card-raycast); 227 ≥ baseline 203. lint clean; build TS-strict clean; budget 436.8KB gz / 550 (Phase 2 was 440.1 → −3.3KB: deleting the CasePortals peel outweighs the single-quad cards; P3 est was +12KB — well under, no cut list needed).**
+- [x] Visual: cards sit on the axis through the work window; camera rail dives past both; hover grows/brightens/pool-follows; echo doubles titles on hard flick and is pixel-clean at rest (screenshot diff rest vs static); DOM #work column still readable alongside; `?work=0` kills the GL cards only.
+- [x] Budget checkpoint vs projection (P3 est +12KB).
+- [x] Commit `feat(s6): helix-mounted work cards + hover physics + title echo; case-portals peel retired`.
+
+**P3 gate record (2026-07-15):** 228 tests / 27 files, lint clean, build clean, budget **436.8KB gz / 550** (−3.3KB vs P2). Verifier round: rail framing functional (upper-center/tilted, knobs in workrail.ts), echo pure at rest, 60fps med soak, hero+tower regressions clean. BLOCKER found+fixed: bare [tabindex] in INTERACTIVE_SELECTOR matched <section tabIndex=-1> → hover/click dead page-wide; now :not([tabindex="-1"]) + regression test. Hover/click proven with guard neutralized (equivalent path); a no-neutralization in-browser re-check died on the 2am session limit — FIRST ACTION FOR NEXT SESSION (see Phase 4 header note).
 
 ## Phase 4 — Click→portal case entry
+
+> **NEXT-SESSION FIRST ACTION:** quick browser re-check of P3 hover/click with the shipped guard (pnpm dev → hover GL card in #work: pointer cursor + grow/brighten; hover a DOM link: GL yields; click card: work_card_click, 0 errors). Then proceed with 4.1.
 
 ### Task 4.1: `src/lib/portal-tween.ts` (+ tests first)
 

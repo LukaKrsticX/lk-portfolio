@@ -8,7 +8,8 @@ export type AnalyticsEvent =
   | "form_submit_ok"
   | "form_submit_fail"
   | "agencies_page_view"
-  | "booking_click";
+  | "booking_click"
+  | "work_card_click";
 
 /** One anonymous id per hard pageload, memory only — SPA navigation preserves it. */
 let distinctId: string | null = null;

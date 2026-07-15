@@ -6,8 +6,8 @@ import { debugFlag } from "@/lib/debug-flags";
 import type { Tier } from "@/lib/quality";
 import { clamp01, scrollMetrics, scrollSignals, scrollState, stepEnergy } from "@/lib/scroll";
 import { alphaEff } from "@/lib/virtual-scroll";
-import { CasePortals } from "./CasePortals";
 import { buildEnvironmentTexture } from "./env-texture";
+import { HelixCards } from "./HelixCards";
 import { HelixRibbon } from "./HelixRibbon";
 import { Monogram } from "./Monogram";
 import { RippleBackground } from "./RippleBackground";
@@ -27,7 +27,7 @@ export function Hero({ tier, onReady }: { tier: Tier; onReady: () => void }) {
   const rippleOn = useMemo(() => debugFlag("ripple"), []);
   const iridOn = useMemo(() => debugFlag("irid"), []);
   const choreoOn = useMemo(() => debugFlag("choreo"), []);
-  const portalsOn = useMemo(() => debugFlag("portals"), []);
+  const workOn = useMemo(() => debugFlag("work"), []);
 
   const pointer = usePointerTracker();
   const trail = usePointerRipple(pointer, rippleOn);
@@ -114,14 +114,15 @@ export function Hero({ tier, onReady }: { tier: Tier; onReady: () => void }) {
   return (
     <>
       <RippleBackground trail={trail} />
-      {portalsOn && <CasePortals tier={tier} />}
       {/* CameraRig (Scene.tsx) owns dolly/sway/parallax now — this group is a static
-          scale wrapper; the monogram recede stays Hero's (heroP-driven). */}
+          scale wrapper; the monogram recede stays Hero's (heroP-driven). HelixCards live
+          INSIDE it, alongside the ribbon, so they inherit the same tier scale and axis frame. */}
       <group scale={tier === "low" ? 0.9 : 1}>
         <group ref={monogramGroup} scale={1.2}>
           <Monogram material={material} />
         </group>
         <HelixRibbon material={material} choreo={choreoOn} />
+        {workOn && <HelixCards tier={tier} choreo={choreoOn} />}
       </group>
     </>
   );
