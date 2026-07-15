@@ -6,6 +6,7 @@ import type { Tier } from "@/lib/quality";
 import { DPR_CAP } from "@/lib/quality";
 import { CameraRig } from "./CameraRig";
 import { Hero } from "./Hero";
+import { PortalLayer } from "./PortalLayer";
 import { RafBridge } from "./RafBridge";
 
 export default function Scene({ tier, onDemote }: { tier: Tier; onDemote: () => void }) {
@@ -36,6 +37,9 @@ export default function Scene({ tier, onDemote }: { tier: Tier; onDemote: () => 
             so a reachable upper bound would flag healthy 60Hz machines. */}
         <PerformanceMonitor bounds={() => [50, 1000]} onDecline={onDemote} />
         <RafBridge />
+        {/* PortalLayer steps the portal machine + publishes camT BEFORE CameraRig reads it (same
+            frame). It renders the fullscreen wipe quad above the scene (renderOrder 9999). */}
+        <PortalLayer />
         <CameraRig />
         <Hero tier={tier} onReady={handleReady} />
       </Canvas>

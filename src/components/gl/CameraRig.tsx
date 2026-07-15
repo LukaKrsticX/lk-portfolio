@@ -5,6 +5,7 @@ import { MathUtils, PerspectiveCamera, Vector3 } from "three";
 import { site } from "@/content/site";
 import { debugFlag } from "@/lib/debug-flags";
 import { blendAt } from "@/lib/keypoints";
+import { portalRig } from "@/lib/portal-store";
 import { keypointsStore, scrollSignals } from "@/lib/scroll";
 import { railWaypoint } from "@/lib/workrail";
 import { usePointerTracker } from "./use-pointer-tracker";
@@ -80,6 +81,7 @@ export function CameraRig() {
 
   const posRef = useRef(new Vector3(HERO.pos[0], HERO.pos[1], HERO.pos[2]));
   const lookRef = useRef(new Vector3(HERO.look[0], HERO.look[1], HERO.look[2]));
+  const lookScratch = useRef(new Vector3());
   const wobble = useRef(new Vector3());
   const wobbleT = useRef(0);
   const rollRef = useRef(0);
@@ -131,23 +133,45 @@ export function CameraRig() {
     const wa = alphaEff(0.025, dt);
     wobble.current.x += (Math.sin(wobbleT.current * 2 * Math.PI * 0.13) * 0.06 - wobble.current.x) * wa;
     wobble.current.y += (Math.sin(wobbleT.current * 2 * Math.PI * 0.17) * 0.06 - wobble.current.y) * wa;
-    cam.position.set(posRef.current.x + wobble.current.x, posRef.current.y + wobble.current.y, posRef.current.z);
-
     // Look target — damped (λ4). lookAt sets the quaternion; roll (rotation.z) is applied after.
     lookRef.current.set(
       MathUtils.damp(lookRef.current.x, lerp(from.look.x, to.look.x, t), 4, dt),
       MathUtils.damp(lookRef.current.y, lerp(from.look.y, to.look.y, t), 4, dt),
       MathUtils.damp(lookRef.current.z, lerp(from.look.z, to.look.z, t), 4, dt),
     );
-    cam.lookAt(lookRef.current);
 
-    // Velocity roll: world tilt ∝ velN, capped ±0.05 rad, eased α0.1.
-    const rollTarget = clampSym(scrollSignals.velN * 0.05, 0.05);
+    // Portal fly-in override: blend the applied camera toward the clicked card by camT. The portal
+    // only publishes a target + camT (portalRig) — CameraRig stays the single writer of the actual
+    // camera. ov=0 leaves the rail pose untouched; ov=1 sits the camera INTO the card face.
+    const baseX = posRef.current.x + wobble.current.x;
+    const baseY = posRef.current.y + wobble.current.y;
+    const baseZ = posRef.current.z;
+    const ov = portalRig.active ? portalRig.camT : 0;
+    if (ov > 0) {
+      cam.position.set(
+        lerp(baseX, portalRig.pos[0], ov),
+        lerp(baseY, portalRig.pos[1], ov),
+        lerp(baseZ, portalRig.pos[2], ov),
+      );
+      lookScratch.current.set(
+        lerp(lookRef.current.x, portalRig.look[0], ov),
+        lerp(lookRef.current.y, portalRig.look[1], ov),
+        lerp(lookRef.current.z, portalRig.look[2], ov),
+      );
+      cam.lookAt(lookScratch.current);
+    } else {
+      cam.position.set(baseX, baseY, baseZ);
+      cam.lookAt(lookRef.current);
+    }
+
+    // Velocity roll: world tilt ∝ velN, capped ±0.05 rad, eased α0.1 — quieted during the portal.
+    const rollTarget = clampSym(scrollSignals.velN * 0.05, 0.05) * (1 - ov);
     rollRef.current += (rollTarget - rollRef.current) * alphaEff(0.1, dt);
     cam.rotation.z = rollRef.current;
 
     // fov scrub — α0.1, and updateProjectionMatrix ONLY on a real change (≥0.01) to avoid churn.
-    const targetFov = lerp(from.fov, to.fov, t);
+    // Portal fov push-in (fovBoost·camT) folds into the same eased target.
+    const targetFov = lerp(from.fov, to.fov, t) + portalRig.fovBoost * ov;
     const newFov = cam.fov + (targetFov - cam.fov) * alphaEff(0.1, dt);
     if (Math.abs(newFov - cam.fov) > 0.01) {
       cam.fov = newFov;

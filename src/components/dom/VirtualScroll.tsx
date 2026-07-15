@@ -2,6 +2,7 @@
 // NEVER import "@react-three/fiber" (or anything from src/components/gl/) here — it would pull fiber+three into the first-load chunk. GL side talks to us only via src/lib/scroll.ts.
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { debugFlag } from "@/lib/debug-flags";
+import { isPortalActive, subscribePortal } from "@/lib/portal-store";
 import {
   getSceneLive, measureScrollMetrics, pipelineRef, scrollMetrics, scrollMode, scrollState, subscribeSceneLive,
 } from "@/lib/scroll";
@@ -100,6 +101,17 @@ export function VirtualScroll() {
     measureScrollMetrics();
     const pipeline = createVirtualScroll({ max: scrollMetrics.maxScroll, y0: seedY });
     if (root) root.style.willChange = "transform";
+
+    // Portal lock: while a case portal is engaged (open through the end of its close animation) the
+    // pipeline ignores wheel/tween input — PortalLayer's exit accumulator + Esc/Back own the close.
+    // Synced via the portal bus so a deep-link open that activates before OR after this takeover
+    // still ends up locked (order-independent).
+    const syncPortalLock = (): void => {
+      if (isPortalActive()) pipeline.lock();
+      else pipeline.unlock();
+    };
+    const unsubPortal = subscribePortal(syncPortalLock);
+    syncPortalLock();
 
     // Frame fn: dt from the addEffect timestamp (first frame seeded at 1/60). step → write
     // the store the whole GL layer reads → paint the transform (rounded to kill string churn).
@@ -215,6 +227,7 @@ export function VirtualScroll() {
     return () => {
       const yNow = pipeline.y;
       pipelineRef.current = null;
+      unsubPortal();
       window.removeEventListener("scroll", onNativeLeak);
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("keydown", onKeyDown);

@@ -1,3 +1,4 @@
+import { CaseDialog } from "@/components/dom/CaseDialog";
 import { Nav } from "@/components/dom/Nav";
 import { Sections } from "@/components/dom/Sections";
 import { VirtualScroll } from "@/components/dom/VirtualScroll";
@@ -15,6 +16,9 @@ export default function Home() {
         <Sections />
       </div>
       <VirtualScroll />
+      {/* Case portal dialog (DOM side). Renders into <body> over the GL backdrop only while a case
+          is open; ?portal=0 or native/reduced modes render nothing (cards stay external links). */}
+      <CaseDialog />
     </>
   );
 }

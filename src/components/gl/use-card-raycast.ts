@@ -2,9 +2,10 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import type { Intersection, Mesh, ShaderMaterial } from "three";
-import { Raycaster } from "three";
+import { Quaternion, Raycaster, Vector3 } from "three";
 import { capture } from "@/lib/analytics";
 import { hoverStep, isInteractiveTarget } from "@/lib/card-raycast";
+import { isPortalActive, openPortal } from "@/lib/portal-store";
 import { scrollSignals } from "@/lib/scroll";
 import type { PointerState } from "./use-pointer-tracker";
 
@@ -37,20 +38,51 @@ export function useCardRaycast({ meshes, materials, pointer, slugs, enabled }: C
   const cursorOn = useRef(false);
   // Card index currently under the cursor (or −1) — read by the click listener, written per frame.
   const hitIndex = useRef(-1);
+  // Scratch for the fly-in target (card world center + its outward normal) — no per-click allocation.
+  const scratchPos = useMemo(() => new Vector3(), []);
+  const scratchQuat = useMemo(() => new Quaternion(), []);
+  const scratchNormal = useMemo(() => new Vector3(), []);
 
-  // Click → work_card_click stub. Re-guards at click time (the frame's hit may be stale by a move).
+  // Click → work_card_click + open the portal (openPortal self-guards on ?portal + virtual mode, so
+  // native/reduced keep the plain DOM external-link cards). Re-guards the interactive-DOM check at
+  // click time (the frame's hit may be stale by a move). Camera fly-in target = the card's world
+  // center pushed out along its normal, so the camera dives INTO the clicked card face.
   useEffect(() => {
     if (!enabled) return;
     const onClick = (e: MouseEvent): void => {
+      // While a portal is engaged (open or animating closed) the cards sit behind the dialog and
+      // scroll is locked — a bubbled click on a dialog control (close/prev/next) must not re-fire the
+      // card stub. The dialog can unmount synchronously before this window listener runs, so the
+      // elementFromPoint guard below would miss it; gate on the portal-active flag directly.
+      if (isPortalActive()) return;
       // hitIndex is −1 outside the work window (the frame loop clears it), so a click on a hidden
       // card can never fire — but re-check the interactive-DOM guard against the live cursor too.
       if (isInteractiveTarget(document.elementFromPoint(e.clientX, e.clientY))) return;
       const i = hitIndex.current;
-      if (i >= 0 && i < slugs.length) capture("work_card_click", { slug: slugs[i] });
+      if (i < 0 || i >= slugs.length) return;
+      capture("work_card_click", { slug: slugs[i] });
+      const mesh = meshes.current?.[i];
+      if (!mesh) {
+        openPortal(i, "click");
+        return;
+      }
+      mesh.getWorldPosition(scratchPos);
+      mesh.getWorldQuaternion(scratchQuat);
+      scratchNormal.set(0, 0, 1).applyQuaternion(scratchQuat).normalize();
+      openPortal(i, "click", {
+        target: {
+          pos: [
+            scratchPos.x + scratchNormal.x * 0.55,
+            scratchPos.y + scratchNormal.y * 0.55,
+            scratchPos.z + scratchNormal.z * 0.55,
+          ],
+          look: [scratchPos.x, scratchPos.y, scratchPos.z],
+        },
+      });
     };
     window.addEventListener("click", onClick);
     return () => window.removeEventListener("click", onClick);
-  }, [enabled, slugs]);
+  }, [enabled, slugs, meshes, scratchPos, scratchQuat, scratchNormal]);
 
   // Cursor must never be left as a pointer when the hook stops owning it.
   useEffect(

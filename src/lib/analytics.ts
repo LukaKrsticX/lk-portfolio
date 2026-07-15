@@ -9,7 +9,9 @@ export type AnalyticsEvent =
   | "form_submit_fail"
   | "agencies_page_view"
   | "booking_click"
-  | "work_card_click";
+  | "work_card_click"
+  | "portal_open"
+  | "portal_close";
 
 /** One anonymous id per hard pageload, memory only — SPA navigation preserves it. */
 let distinctId: string | null = null;
