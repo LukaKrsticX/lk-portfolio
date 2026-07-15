@@ -241,3 +241,13 @@ Completed 2026-07-14. Key facts every phase relies on:
 - [x] Suite counts — every new lib has a test file (virtual-scroll/keypoints/helix-morph/workrail/card-raycast/portal-tween/portal-store/particles/burst-triggers/palette/decode + DecodeText/CaseDialog components); deleted-code tests removed with CasePortals in P3. **Mutation-teeth spot check DONE:** negating `WHEEL_MULT` (0.25 → −0.25) in the virtual-scroll cascade fails 3 tests (28→25 pass) — teeth bite; reverted, tree restored.
 - [x] Cross-mode matrix run — VERIFIED 16/16 cells green, 0 console errors: virtual×{low,med,high}×{top,#work,#case} all render + dialog opens; native(`?scroll=0`)×{top,#work,#case} = plain-DOM, deep-link #case scrolls to #work with NO dialog; reduced-motion×{top,#case} = no canvas / plain DOM / no dialog; no-WebGL×{top,#work} = graceful DOM fallback. Parity holds everywhere.
 - [x] Update CCX ledger: hot.md entry + brief's ledger line via a wiki-safe note (CCX side), spec status → SHIPPED-ON-BRANCH.
+
+## Post-preview operator feedback (2026-07-15) — DO BEFORE MERGE
+
+Operator reviewed the Vercel branch preview (`lk-portfolio-git-s6-helix-feel-lukakrstic.vercel.app`, deploy of `67beb3b`). Verdict: **great overall** — one tuning ask before merge:
+
+- [ ] **Too bright on the work-card scroll.** Frame-by-frame the #work scroll window and dial the brightness down. Constants-only (no structural edits); bisect these candidates in likely order (verifier evidence: the work section measured as the brightest+bluest via the palette lift, and high-tier bloom was already flagged strong):
+  1. **Palette work keyframe** — `src/lib/palette.ts` (the `work` row's `bgTop/bgBottom` + `emissive`/`tint`; work is the brightest/bluest section by design — lower the lift). PRIMARY suspect for "svetlo na scrollu kartice".
+  2. **Bloom** — `src/components/gl/PostChain.tsx` `BLOOM_INTENSITY` (~0.55) and high-tier `MIPS` (5): bloom lifts the bright cards/monogram in that window. Already an operator taste-knob in `docs/s6-ab-notes.md`.
+  3. **HelixCards base brightness** — `src/components/gl/HelixCards.tsx` fragment `mix(0.65, 0.9, uHover)` + the brand-pool radial lift + `sin(π·uHover)·0.3` flash, if the cards themselves read too hot.
+  Method: `?tier=high` and default med, screenshot the work window before/after; keep the resting look, kill the glare. After the tweak: `pnpm test && pnpm lint && pnpm build && pnpm budget` (green at 458), commit + push (preview rebuilds), operator re-reviews, THEN FF-merge.
