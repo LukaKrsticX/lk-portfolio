@@ -14,6 +14,7 @@ import {
   openPortal,
   portalMachine,
   resetPortalForTests,
+  takePortalScrollRestore,
 } from "./portal-store";
 
 const HOLIMED = 0;
@@ -110,5 +111,30 @@ describe("openPortal / closePortal lifecycle", () => {
 
   it("has exactly the two site cases wired (N=2 → prev/next is the other one)", () => {
     expect(site.cases.map((c) => c.slug)).toEqual(["holimed", "cea"]);
+  });
+});
+
+describe("M2 — portal-close scroll-restore signal", () => {
+  it("a click-open close (history.back path) raises the restore signal exactly once", () => {
+    openPortal(HOLIMED, "click"); // pushes #case-holimed → pushedEntry = true
+    expect(takePortalScrollRestore()).toBe(false); // not set merely by opening
+    closePortal("esc"); // non-pop + pushedEntry → history.back → restore pending
+    expect(takePortalScrollRestore()).toBe(true);
+    expect(takePortalScrollRestore()).toBe(false); // consumed once — a real later Back is unaffected
+  });
+
+  it("a deep-link open close (no pushed entry, no history.back) does NOT raise the signal", () => {
+    // Simulate arriving on #case-holimed: the hash pre-exists, so openPortal inherits it (no push).
+    window.history.replaceState(null, "", "#case-holimed");
+    openPortal(HOLIMED, "pop", { fast: true });
+    expect(isPortalActive()).toBe(true);
+    closePortal("esc"); // pushedEntry false → strips the hash via replaceState, no popstate
+    expect(takePortalScrollRestore()).toBe(false);
+  });
+
+  it("a browser-Back close (cause='pop') does NOT raise the signal (no self-initiated history.back)", () => {
+    openPortal(HOLIMED, "click");
+    closePortal("pop"); // browser already navigated; restore stays with today's anchor behavior
+    expect(takePortalScrollRestore()).toBe(false);
   });
 });

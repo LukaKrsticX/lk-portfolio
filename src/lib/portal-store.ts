@@ -58,6 +58,21 @@ let view: PortalView = CLOSED_VIEW;
 // open that inherited the hash. Governs whether close pops the entry or just strips the hash.
 let pushedEntry = false;
 
+// M2 (plan §6.4): a non-`pop` close of a click-opened portal calls history.back(), which fires a
+// popstate that VirtualScroll would otherwise tween to the #work anchor (~160px bump off the
+// reader's pre-open position). This flag tells VirtualScroll's popstate handler "this back is a
+// portal close — restore the exact pre-open y you saved at open, don't seek the section anchor."
+// VirtualScroll owns the saved y (it holds the pipeline); this only signals the intent + is
+// consumed exactly once (takePortalScrollRestore), so a later real Back navigation is unaffected.
+let scrollRestorePending = false;
+
+/** M2: consume the "restore pre-open scroll y" signal (true once after a click-open portal close). */
+export function takePortalScrollRestore(): boolean {
+  const v = scrollRestorePending;
+  scrollRestorePending = false;
+  return v;
+}
+
 const subs = new Set<() => void>();
 function notify(): void {
   for (const cb of subs) cb();
@@ -161,6 +176,7 @@ export function closePortal(cause: PortalCause): void {
       const hash = `#case-${slug}`;
       if (pushedEntry) {
         pushedEntry = false;
+        scrollRestorePending = true; // M2: the coming popstate must restore pre-open y, not the anchor
         history.back(); // fires popstate; view is already null so the handler no-ops
       } else if (location.hash === hash) {
         history.replaceState(null, "", location.pathname + location.search);
@@ -185,6 +201,7 @@ export function finalizePortalClosed(): void {
 export function resetPortalForTests(): void {
   view = CLOSED_VIEW;
   pushedEntry = false;
+  scrollRestorePending = false;
   portalRig.active = false;
   portalRig.camT = 0;
   portalMachine.close();

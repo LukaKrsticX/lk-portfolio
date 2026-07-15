@@ -20,6 +20,15 @@ import type { PointerState } from "./use-pointer-tracker";
 // pointer-ripple as its trail language (RippleBackground untouched), so the hook returns a null ref.
 const SIM_RES: Record<Tier, number | null> = { high: 256, med: 192, low: null };
 
+/**
+ * Cross-sibling handle to the live fluid texture (rg = velocity, b = dye). Hero owns the hook and
+ * gets the ref back; PostChain — a Scene sibling OUTSIDE Hero — reads the composite edge boost from
+ * here. Mirrors scroll.ts's plain-module-store idiom. null when the sim is off (low / ?fluid=0) or
+ * before the first sim frame; PostChain gates its use on it (uHasFluid). There is exactly one sim
+ * (Hero mounts one), so a singleton is correct.
+ */
+export const fluidBus: { current: Texture | null } = { current: null };
+
 // Study constants (D4): dissipation 0.98, curl-ish rotation ~30 (a cheap pressure-free swirl —
 // the advection offset is rotated by a small angle that scales with local speed, NOT a real
 // Navier–Stokes curl). Splat is a Gaussian of the pointer with velocity injected into rg.
@@ -147,7 +156,13 @@ export function useFluidSim(
   // When the sim is off (low tier / ?fluid=0, or an active→inactive tier demote) null the ref so
   // Particles' uHasFluid stays 0. In an effect, not render (refs must not be written during render).
   useEffect(() => {
-    if (!active) textureRef.current = null;
+    if (!active) {
+      textureRef.current = null;
+      fluidBus.current = null; // PostChain reads this; keep it in lockstep with the local ref
+    }
+    return () => {
+      fluidBus.current = null; // hook unmounts (tier change) → drop the stale handle
+    };
   }, [active]);
 
   useFrame(({ gl }) => {
@@ -175,6 +190,7 @@ export function useFluidSim(
     gl.setRenderTarget(null);
 
     textureRef.current = write.texture;
+    fluidBus.current = write.texture; // publish for PostChain (Scene sibling, outside Hero)
     targets.current = { read: write, write: read };
   }, -2); // before the ripple (−1) and the scene render (0); negative never takes over rendering
 

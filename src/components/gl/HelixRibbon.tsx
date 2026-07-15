@@ -1,7 +1,7 @@
 "use client";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
-import { Group, type IUniform, Material, PlaneGeometry } from "three";
+import { Group, type IUniform, Material, type MeshStandardMaterial, PlaneGeometry } from "three";
 import { debugChoice } from "@/lib/debug-flags";
 import {
   AXIS_VARIANTS,
@@ -13,6 +13,7 @@ import {
   type Variant,
 } from "@/lib/helix-morph";
 import { blendAt } from "@/lib/keypoints";
+import { paletteAt } from "@/lib/palette";
 import { keypointsStore, scrollSignals } from "@/lib/scroll";
 
 const SEGMENTS = 256;
@@ -134,7 +135,17 @@ export function HelixRibbon({ material, choreo }: { material: Material; choreo: 
     const p = scrollSignals.p;
     const kf = choreo ? morphAt(table, blendAt(keypointsStore.current, p)) : HELIX_REST;
     const uVel = scrollSignals.velSm;
+    // Palette emissive lift ("same geometry, different light", spec §7): tint colours the axis
+    // glow, emissive sets its strength — a live uniform write (emissive value/intensity never bump
+    // material.version, so no recompile; the iridescence/transparent traps are untouched). Ungated
+    // by choreo: lighting scrubs globally like the post/background palette (choreo freezes SHAPE).
+    const pal = paletteAt(blendAt(keypointsStore.current, p));
     for (const mat of [matA, matB]) {
+      (mat as MeshStandardMaterial).emissive.setRGB(
+        pal.tint[0] * pal.emissive,
+        pal.tint[1] * pal.emissive,
+        pal.tint[2] * pal.emissive,
+      );
       const u = strandUniforms(mat);
       if (!u) continue; // pre-compile frames: uniforms not injected yet
       u.uRadius.value = kf.radius;

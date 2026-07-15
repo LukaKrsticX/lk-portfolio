@@ -2,7 +2,10 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 
-const LIMIT_KB = 550;
+// S6 P6 budget lock (docs/plan-s6.md §6.4). Formula: ceil(measured + 0.15·(measured − 442.4) + 10),
+// capped at 550. Measured 2026-07-15 at the end of P6 = 446.6KB gz → ceil(446.6 + 0.15·4.2 + 10)
+// = ceil(457.23) = 458. Headroom (~11KB) absorbs minor post-merge drift without a re-baseline.
+const LIMIT_KB = 458;
 
 const gzKB = (buf) => gzipSync(buf).length / 1024;
 

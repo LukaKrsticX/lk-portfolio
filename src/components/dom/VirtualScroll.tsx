@@ -2,7 +2,7 @@
 // NEVER import "@react-three/fiber" (or anything from src/components/gl/) here — it would pull fiber+three into the first-load chunk. GL side talks to us only via src/lib/scroll.ts.
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { debugFlag } from "@/lib/debug-flags";
-import { isPortalActive, subscribePortal } from "@/lib/portal-store";
+import { isPortalActive, subscribePortal, takePortalScrollRestore } from "@/lib/portal-store";
 import {
   getSceneLive, measureScrollMetrics, pipelineRef, scrollMetrics, scrollMode, scrollState, subscribeSceneLive,
 } from "@/lib/scroll";
@@ -106,8 +106,16 @@ export function VirtualScroll() {
     // pipeline ignores wheel/tween input — PortalLayer's exit accumulator + Esc/Back own the close.
     // Synced via the portal bus so a deep-link open that activates before OR after this takeover
     // still ends up locked (order-independent).
+    // M2 (plan §6.4): snapshot the reader's exact head at the open EDGE (false→true), so a later
+    // portal close can land back on it instead of the #work anchor. Captured here because
+    // VirtualScroll owns the pipeline; the portal store only signals when to use it.
+    let portalWasActive = false;
+    let savedY = pipeline.y;
     const syncPortalLock = (): void => {
-      if (isPortalActive()) pipeline.lock();
+      const active = isPortalActive();
+      if (active && !portalWasActive) savedY = pipeline.y; // pre-open head = the reader's position
+      portalWasActive = active;
+      if (active) pipeline.lock();
       else pipeline.unlock();
     };
     const unsubPortal = subscribePortal(syncPortalLock);
@@ -207,8 +215,15 @@ export function VirtualScroll() {
       pipeline.tweenTo(docTop(target), 800); // layout-space — transform-independent
     };
     // Body never scrolls in virtual mode, so the browser can't restore a traversal
-    // position — tween to the hash target (or top) ourselves.
+    // position — tween to the hash target (or top) ourselves. M2: if this popstate is a
+    // portal close (history.back from a click-open), restore the exact pre-open y instead of
+    // seeking the section anchor. Consuming the signal here means THIS handler owns the
+    // destination — no competing tween, so the restore always wins (no race with the anchor seek).
     const onPop = () => {
+      if (takePortalScrollRestore()) {
+        pipeline.tweenTo(savedY, 600); // land back exactly where the reader opened the card
+        return;
+      }
       const hash = location.hash;
       const el = hash && hash !== "#" ? document.getElementById(hash.slice(1)) : null;
       pipeline.tweenTo(el ? docTop(el) : 0, 800);

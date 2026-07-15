@@ -2,6 +2,9 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { Color, ShaderMaterial, Texture, Vector2 } from "three";
+import { blendAt } from "@/lib/keypoints";
+import { paletteAt } from "@/lib/palette";
+import { keypointsStore, scrollSignals } from "@/lib/scroll";
 
 const BG_VERT = /* glsl */ `
 varying vec2 vUv;
@@ -16,7 +19,8 @@ void main() {
 const BG_FRAG = /* glsl */ `
 uniform sampler2D uTrail;
 uniform float uTime;
-uniform vec3 uColor;
+uniform vec3 uColorTop;
+uniform vec3 uColorBottom;
 uniform vec2 uResolution;
 varying vec2 vUv;
 
@@ -40,7 +44,10 @@ void main() {
   float v = clamp(trail * 0.85 + idle * 0.05, 0.0, 1.0);
   float d = bayer4(gl_FragCoord.xy / 2.0);
   float lit = step(d, v);
-  gl_FragColor = vec4(uColor * v * lit, v * lit * 0.35);
+  // Palette gradient (spec §7): bottom→top over the plane. Hero uses equal stops (= today's flat
+  // accent) so p=0 is byte-identical; later sections scrub the gradient (the "different light").
+  vec3 col = mix(uColorBottom, uColorTop, vUv.y);
+  gl_FragColor = vec4(col * v * lit, v * lit * 0.35);
 }
 `;
 
@@ -54,7 +61,8 @@ export function RippleBackground({ trail }: { trail: RefObject<Texture | null> }
         uniforms: {
           uTrail: { value: null },
           uTime: { value: 0 },
-          uColor: { value: new Color("#4da6e8") },
+          uColorTop: { value: new Color("#4da6e8") },
+          uColorBottom: { value: new Color("#4da6e8") },
           uResolution: { value: new Vector2(1, 1) },
         },
         transparent: true,
@@ -70,6 +78,10 @@ export function RippleBackground({ trail }: { trail: RefObject<Texture | null> }
     material.uniforms.uTime.value = time.current;
     material.uniforms.uTrail.value = trail.current;
     gl.getDrawingBufferSize(material.uniforms.uResolution.value as Vector2);
+    // Palette scrub (reader — Hero is the signal writer). Equal stops at hero ⇒ no visual change.
+    const pal = paletteAt(blendAt(keypointsStore.current, scrollSignals.p));
+    (material.uniforms.uColorTop.value as Color).setRGB(pal.bgTop[0], pal.bgTop[1], pal.bgTop[2]);
+    (material.uniforms.uColorBottom.value as Color).setRGB(pal.bgBottom[0], pal.bgBottom[1], pal.bgBottom[2]);
   });
 
   // Oversized so it still covers the frustum at z=-2 with mild camera parallax.

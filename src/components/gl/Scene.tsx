@@ -1,17 +1,23 @@
 "use client";
 import { PerformanceMonitor } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { debugFlag } from "@/lib/debug-flags";
 import type { Tier } from "@/lib/quality";
 import { DPR_CAP } from "@/lib/quality";
 import { CameraRig } from "./CameraRig";
 import { Hero } from "./Hero";
 import { PortalLayer } from "./PortalLayer";
+import { PostChain } from "./PostChain";
 import { RafBridge } from "./RafBridge";
 
 export default function Scene({ tier, onDemote }: { tier: Tier; onDemote: () => void }) {
   const [ready, setReady] = useState(false);
   const handleReady = useCallback(() => setReady(true), []);
+  // Post is a med+ filmic layer, gated by ?post. The mount is tied to `tier`, so a mid-session
+  // PerformanceMonitor demote to low UNMOUNTS PostChain → its priority-1 subscriber goes away →
+  // R3F resumes auto-render (today's byte-exact path). Low tier never mounts it at all.
+  const postOn = useMemo(() => debugFlag("post"), []);
 
   return (
     <div
@@ -42,6 +48,9 @@ export default function Scene({ tier, onDemote }: { tier: Tier; onDemote: () => 
         <PortalLayer />
         <CameraRig />
         <Hero tier={tier} onReady={handleReady} />
+        {/* Render-takeover post (priority-1 useFrame). Mounted last so its manual gl.render sees the
+            fully-updated scene. tier!=="low" ties the mount to the demote path; ?post=0 skips it. */}
+        {tier !== "low" && postOn && <PostChain tier={tier} />}
       </Canvas>
     </div>
   );
