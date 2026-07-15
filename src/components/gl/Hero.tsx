@@ -10,7 +10,9 @@ import { buildEnvironmentTexture } from "./env-texture";
 import { HelixCards } from "./HelixCards";
 import { HelixRibbon } from "./HelixRibbon";
 import { Monogram } from "./Monogram";
+import { Particles } from "./Particles";
 import { RippleBackground } from "./RippleBackground";
+import { useFluidSim } from "./use-fluid-sim";
 import { usePointerRipple } from "./use-pointer-ripple";
 import { usePointerTracker } from "./use-pointer-tracker";
 
@@ -28,9 +30,13 @@ export function Hero({ tier, onReady }: { tier: Tier; onReady: () => void }) {
   const iridOn = useMemo(() => debugFlag("irid"), []);
   const choreoOn = useMemo(() => debugFlag("choreo"), []);
   const workOn = useMemo(() => debugFlag("work"), []);
+  const fxOn = useMemo(() => debugFlag("fx"), []);
+  const fluidOn = useMemo(() => debugFlag("fluid"), []);
 
   const pointer = usePointerTracker();
   const trail = usePointerRipple(pointer, rippleOn);
+  // Mouse-fluid trail (med+ only; low tier / ?fluid=0 → null ref, RippleBackground stays the trail).
+  const fluid = useFluidSim(tier, pointer, fluidOn);
 
   // Iridescence is CONSTANT per mount: crossing 0 at runtime bumps
   // material.version → full program recompile → visible hitch on iGPU.
@@ -123,6 +129,9 @@ export function Hero({ tier, onReady }: { tier: Tier; onReady: () => void }) {
         </group>
         <HelixRibbon material={material} choreo={choreoOn} />
         {workOn && <HelixCards tier={tier} choreo={choreoOn} />}
+        {/* Analytic particle field (ambient drift + confetti bursts + velocity streaks); reads the
+            fluid RT for the med+ drift nudge. ?fx=0 drops it entirely. */}
+        {fxOn && <Particles tier={tier} fluid={fluid} />}
       </group>
     </>
   );
