@@ -80,8 +80,10 @@ void main() {
   // Back faces render as the dark slate (DoubleSide is required for the back-face read AND for the
   // raycast to hit either face). A per-fragment constant — no motion term.
   vec3 col = mix(tex, SLATE, gl_FrontFacing ? 0.0 : 1.0);
-  // Brightness 0.65 at rest → 0.9 on full hover.
-  col *= mix(0.65, 0.9, uHover);
+  // Brightness 0.45 at rest → 0.7 on full hover. The case captures are near-white site
+  // screenshots; the post bloom is deliberately unthresholded, so a brighter base washes
+  // the whole work window (measured: 13% of pixels clipped at base 0.65 / high tier).
+  col *= mix(0.45, 0.7, uHover);
   // Brand pool: radial lift whose center slides from the card center toward the cursor as hover
   // ramps; strength ramps 0.3→0.5 and is fully gated by uHover (exactly 0 with no hover).
   vec2 center = mix(vec2(0.5), uHoverPoint, uHover);

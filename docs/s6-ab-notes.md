@@ -53,7 +53,7 @@ targets), bloom/grade run in linear, and the composite-to-screen applies ACESFil
 | `SHIFT_VEL` | PostChain.tsx:129 | 0.0016 | Extra split × `|velSm|` (0..1) on flick. |
 | `SHIFT_FLUID` | PostChain.tsx:130 | 0.02 | Extra split × `length(fluid.xy)` at trail edges (med+). |
 | `VIGNETTE` | PostChain.tsx:131 | 0.16 | Corner darkening. |
-| `MIPS_FOR` | PostChain.tsx:132 | high 5 / med 3 | Bloom mip count (softness/cost). Base mip = 0.3×DPR. |
+| `MIPS_FOR` | PostChain.tsx:132 | high 4 / med 3 | Bloom mip count (softness/cost). Base mip = 0.3×DPR. **This is a global GLOW dial, not just cost — each mip step ≈ 2.5× scene luminance** (high 5→4 measured: work 0.396→0.160 meanY, contact 0.066→0.033). |
 
 ## 3. Palette / lighting scrub (P6) — `src/lib/palette.ts`
 
@@ -95,7 +95,7 @@ Digits-only scramble resolving left-to-right (p² clean head) at 15fps, on first
 | Helix keyframes | helix-morph.ts (`MORPH_ROWS`) | per-section radius/turns/pitch/width/tilt/drift |
 | Camera rig | CameraRig.tsx:28–36 | per-section `{pos,look,fov,moveXY}`; hero locked `[0,0,3.6]`/fov 42 |
 | Work rail/cards | workrail.ts:19–25 | `CARD_RADIUS 1.15`, `CARD_ANGLE_STEP −50°`, `ROT_CAP 0.45` |
-| Card material | HelixCards.tsx:41,70,90 | `SMEAR_K 0.016`, `BRAND` accent, mid-hover flash `sin(π·uHover)·0.3` |
+| Card material | HelixCards.tsx:41,70,90 | `SMEAR_K 0.016`, `BRAND` accent, base brightness `mix(0.45,0.7,uHover)` (work-scoped — free for other sections), mid-hover flash `sin(π·uHover)·0.3` |
 | Card hover | card-raycast.ts:21 | `HOVER_ALPHA 0.08` |
 | Title echo | CardTitle.tsx:30–43 | 15 ghost columns, drag `0.15·uEcho`, split `mix(0.001,0.02)` @120° |
 | Portal choreo | portal-tween.ts:14–19 | `CAM_MS 700`, `WIPE_MS 1500`, `DOLLY_MS 1500`, `CLOSE_MS 800`, `EXIT_THRESHOLD 1200` px/s |

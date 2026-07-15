@@ -246,8 +246,56 @@ Completed 2026-07-14. Key facts every phase relies on:
 
 Operator reviewed the Vercel branch preview (`lk-portfolio-git-s6-helix-feel-lukakrstic.vercel.app`, deploy of `67beb3b`). Verdict: **great overall** — one tuning ask before merge:
 
-- [ ] **Too bright on the work-card scroll.** Frame-by-frame the #work scroll window and dial the brightness down. **Operator ask (2026-07-15): don't eyeball it in isolation — frame-step the LIVE preview AND compare side-by-side against the reference captures at `C:/Users/L/Desktop/CCX/.raw/lk-portfolio-refs/site-capture-2026-07-14/desktop/` (work frames: `desktop-016..020-work-*`, `desktop-032-work-fresh-load`; also the reel `.raw/lk-portfolio-refs/reel-frames-2026-07-14/`) so the "too bright" delta is grounded in the intended feel, then dial to match.** Constants-only (no structural edits); bisect these candidates in likely order (verifier evidence: the work section measured as the brightest+bluest via the palette lift, and high-tier bloom was already flagged strong):
+- [x] **Too bright on the work-card scroll.** — DONE 2026-07-15, see findings below. Frame-by-frame the #work scroll window and dial the brightness down. **Operator ask (2026-07-15): don't eyeball it in isolation — frame-step the LIVE preview AND compare side-by-side against the reference captures at `C:/Users/L/Desktop/CCX/.raw/lk-portfolio-refs/site-capture-2026-07-14/desktop/` (work frames: `desktop-016..020-work-*`, `desktop-032-work-fresh-load`; also the reel `.raw/lk-portfolio-refs/reel-frames-2026-07-14/`) so the "too bright" delta is grounded in the intended feel, then dial to match.** Constants-only (no structural edits); bisect these candidates in likely order (verifier evidence: the work section measured as the brightest+bluest via the palette lift, and high-tier bloom was already flagged strong):
   1. **Palette work keyframe** — `src/lib/palette.ts` (the `work` row's `bgTop/bgBottom` + `emissive`/`tint`; work is the brightest/bluest section by design — lower the lift). PRIMARY suspect for "svetlo na scrollu kartice".
   2. **Bloom** — `src/components/gl/PostChain.tsx` `BLOOM_INTENSITY` (~0.55) and high-tier `MIPS` (5): bloom lifts the bright cards/monogram in that window. Already an operator taste-knob in `docs/s6-ab-notes.md`.
   3. **HelixCards base brightness** — `src/components/gl/HelixCards.tsx` fragment `mix(0.65, 0.9, uHover)` + the brand-pool radial lift + `sin(π·uHover)·0.3` flash, if the cards themselves read too hot.
   Method: `?tier=high` and default med, screenshot the work window before/after; keep the resting look, kill the glare. After the tweak: `pnpm test && pnpm lint && pnpm build && pnpm budget` (green at 458), commit + push (preview rebuilds), operator re-reviews, THEN FF-merge.
+
+### Findings — brightness pass (2026-07-15, measured not eyeballed)
+
+Method: playwright-cli at 1440×900 (same rig as the reference captures), relative-luminance stats
+(mean / p95 / % pixels clipped >0.95) per section, flag-matrix bisect, then a (mips × bloom × card)
+grid. Reference = `CCX/.raw/lk-portfolio-refs/.../desktop/` (activetheory.net — a DESIGN-STUDY
+capture of a *different* site, not an lk-portfolio regression baseline; it is a feel reference only).
+
+**The plan's suspect order above was wrong.** Evidence:
+
+1. **Palette was NOT the cause (suspect #1, disproven).** `?post=0` alone drops the work window to
+   0.031 meanY (hero sits at ~0.05) — i.e. the scene *before* post is already fine. Lowering the
+   work palette row (`em`, `ct`, `bg`) moved work only 0.394 → ~0.32. Palette left untouched.
+2. **The glare was the post bloom (suspect #2), specifically the HIGH tier's mip count.** `tier=med`
+   (3 mips) measured 0.060 at work — always fine. `tier=high` (5 mips) measured **0.396 meanY with
+   13–20% of pixels clipped to pure white** (the `Selected work` h2 was illegible). med was never
+   broken; only high was.
+3. **`MIPS_FOR` is a global GLOW dial, not a cost dial** — ~2.5× scene luminance per step:
+   `mips 3 / 4 / 5` → work `0.063 / 0.160 / 0.396`, contact `0.014 / 0.033 / 0.066`.
+   Work runs ~5× brighter than contact at EVERY setting, so **no single bloom constant fixes work
+   without proportionally dimming the whole site.** (First attempt — mips 3 + bloom 0.30 — fixed
+   work but flattened the contact helix from a luminous white glow to grey. Reverted.)
+4. **The unthresholded bloom is load-bearing, not a bug.** A soft-knee bright-pass prefilter was
+   prototyped: at `th=0.4` work fell to 0.082 but contact collapsed 0.066 → 0.006. Contact's glow
+   comes from broad mid-bright content *below* any useful threshold. Do not "fix" the bloom with a
+   threshold — it IS the filmic look. Prototype discarded.
+5. **Root imbalance is the CONTENT:** the case captures are near-white website screenshots (Holimed /
+   CEA are white medical sites) filling the frame at the work keyframe, where the helix also opens
+   widest. activetheory's card art is dark/moody — that, not a constant, is the real delta.
+
+**Shipped (constants only, 2 lines):** `MIPS_FOR.high 5→4` (global, stops the clip, keeps the glow)
++ `HelixCards` base `mix(0.65,0.9)` → `mix(0.45,0.7)` (work-scoped, free for other sections).
+
+Result @ tier=high — work **0.396 → 0.125 meanY**, p95 **1.000 → 0.834**, clipped **13.3% → ~0%**;
+contact 0.066 → 0.032; hero 0.059 → 0.029. Gate green: 317 tests / lint / build / budget 446.6@458.
+
+**Operator call still open:** the fix costs some site-wide glow (contact + hero soften ~2×) because
+bloom is global. Options if that reads as too dark: (a) `MIPS_FOR.high` back to 5 and instead dim the
+card captures much harder / re-shoot them dark like the reference — a design job, not a constant;
+(b) accept the softer filmic layer; (c) per-section bloom scale (structural, S7).
+
+**Separate bug found, NOT fixed (needs its own call):** `palette.ts` rows are authored as sRGB
+(`#4da6e8 ≈ [0.302,0.651,0.910]`) but `RippleBackground` writes them via `Color.setRGB()`, which
+lands in three's **linear** working space. Hero therefore paints `rgb(149,211,245)`, not
+`rgb(77,166,232)` — violating palette.ts's own documented "hero p=0 is byte-for-byte the pre-P6
+look" invariant. Visually minor (that plane's alpha is ≤0.0175 at idle; it reads mainly as the
+cursor-trail glow) so it was left alone — fixing it would shift the hero the operator already
+approved. Fix = pass `SRGBColorSpace` to both `setRGB` calls, or re-author the rows in linear.

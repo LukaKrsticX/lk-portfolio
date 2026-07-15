@@ -129,7 +129,7 @@ const SHIFT_BASE = 0.0009; // ≈ sub-pixel at 1440w; the base chromatic split a
 const SHIFT_VEL = 0.0016; // opens to a few px on a hard flick (× |velSm|, 0..1)
 const SHIFT_FLUID = 0.02; // extra split along fluid velocity edges (× length(fluid.xy))
 const VIGNETTE = 0.16;
-const MIPS_FOR: Record<Tier, number> = { high: 5, med: 3, low: 3 };
+const MIPS_FOR: Record<Tier, number> = { high: 4, med: 3, low: 3 };
 
 function zeroTexture(): DataTexture {
   const tex = new DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1); // fluid placeholder (uHasFluid gates use)
