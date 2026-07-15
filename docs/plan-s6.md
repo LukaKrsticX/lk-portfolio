@@ -299,3 +299,47 @@ lands in three's **linear** working space. Hero therefore paints `rgb(149,211,24
 look" invariant. Visually minor (that plane's alpha is ≤0.0175 at idle; it reads mainly as the
 cursor-trail glow) so it was left alone — fixing it would shift the hero the operator already
 approved. Fix = pass `SRGBColorSpace` to both `setRGB` calls, or re-author the rows in linear.
+
+---
+
+## Post-preview round 2 — operator feedback (2026-07-16) — OPEN, DEFERRED TO NEXT SESSION
+
+Reviewed deploy `lk-portfolio-ocqabvb24-lukakrstic.vercel.app/#work` (= `f32f06b`, the brightness fix).
+
+**Verdict on the brightness pass: ACCEPTED** — "Kartice se bolje vide sada" (cards read better now).
+
+Operator raised two NEW items, verbatim:
+
+> "ne svidja mi se njihova pozicija na animaciji, hocu isto da uradimo ono da se ucitavaju onako u
+> onoj spirali kao na onom sajtu, uradi to side by side u sledecoj sekciji da bih video o cemu
+> pricam ... takodje kada se udje u karticu tekst nije bas najcitljiviji i pozadina je previse
+> blurovana da bi se videlo, kada otvoris side by side i vidis frejmove ili jos bolje, kod,
+> skapiraces, svakako imas putanju do originalnog sajta"
+
+### Item 1 — card entrance / position in the spiral (S7 candidate)
+Cards should LOAD IN along the spiral the way activetheory does, rather than their current
+helix-mounted resting pose. Operator wants a **side-by-side** (ours vs reference) built first, to
+align on the target before any implementation.
+Reference material already on disk:
+- `CCX/.raw/lk-portfolio-refs/reel-frames-2026-07-14/` (214 png, 10fps from the IG reel)
+- `CCX/.raw/lk-portfolio-refs/reel-frame-05-cards-tumbling.png`, `-10-skeleton-column.png`, `-12-settled-ring.png`
+  — these three are literally the entrance beats: tumbling → skeleton column → settled ring.
+- `CCX/.raw/lk-portfolio-refs/site-capture-2026-07-14/desktop/desktop-020-back-at-cards.png`, `-032-work-fresh-load.png`
+- Existing decode: `docs/superpowers/specs/2026-07-12-lk-portfolio-s4-case-portals-design.md`
+
+### Item 2 — case portal legibility (S7 candidate)
+On card open: body text is not legible enough, and the backdrop blur is too strong to read through.
+Surfaces: `src/components/dom/CaseDialog.tsx`, `src/components/gl/PortalLayer.tsx`,
+`src/lib/portal-tween.ts` (`WIPE_MS`/`DOLLY_MS`), plus whatever CSS backdrop-filter the dialog uses.
+
+### ⚠ Licensing constraint — READ BEFORE TOUCHING THE BUNDLES
+The operator suggested studying "the code" of the original site. The captured bundles
+(`CCX/.raw/lk-portfolio-refs/activetheory-bundles-2026-07-14/`: `app.*.js`, `compiled.vs` with 174
+GLSL blocks, `uil.*.json` with 2,593 feel constants) carry their own README:
+**"PROPRIETARY — do not copy code/shaders/assets into lk-portfolio or any shipped repo."**
+They may be read for design study / gap analysis only. Re-implement the FEEL from our own primitives;
+do not lift shader source, constants, or assets. Prior analysis: `docs/superpowers/2026-07-14-activetheory-scroll-breakdown.md`.
+
+### Not started
+No brainstorm and no make-plan has been run for either item — per CCX protocol these must be
+invoked properly at slice start, not inline-drafted here.
