@@ -304,6 +304,12 @@ approved. Fix = pass `SRGBColorSpace` to both `setRGB` calls, or re-author the r
 
 ## Post-preview round 2 — operator feedback (2026-07-16) — OPEN, DEFERRED TO NEXT SESSION
 
+> **MERGE DECISION (operator, 2026-07-16): HOLD — do NOT merge S6 to main yet.**
+> S6 stays on the branch until items 1 + 2 below are fixed; then ONE `git merge --ff-only` ships
+> the whole thing. Rationale: spec v2.1's governing principle is *"intensity never blocks access"* —
+> shipping a case portal whose body text the operator himself calls illegible would violate that on
+> a site whose entire purpose is agency outreach. `main` stays at `2b0f2d9` (pre-S6 production).
+
 Reviewed deploy `lk-portfolio-ocqabvb24-lukakrstic.vercel.app/#work` (= `f32f06b`, the brightness fix).
 
 **Verdict on the brightness pass: ACCEPTED** — "Kartice se bolje vide sada" (cards read better now).
